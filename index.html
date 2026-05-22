@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AP Physics Practice — AIS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--bg:#07101f;--card:#0f1d30;--card2:#162238;--accent:#3b82f6;--accent2:#6366f1;--gold:#f59e0b;--green:#10b981;--red:#ef4444;--yellow:#fbbf24;--text:#f1f5f9;--muted:#94a3b8;--border:#1e3050;--radius:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.screen{display:none;min-height:100vh;padding:20px}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.screen.active.top{justify-content:flex-start}
+.founder-banner{width:100%;background:linear-gradient(135deg,#0f1d30,#162238);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:center;gap:10px;position:sticky;top:0;z-index:100}
+.founder-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#f97316);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;color:#000;flex-shrink:0}
+.founder-text{font-size:.8rem;color:var(--muted)}
+.founder-text strong{color:var(--gold);font-size:.85rem}
+.ais-badge{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--gold);font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.04em}
+.app-header{width:100%;max-width:950px;display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding:12px 18px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border)}
+.app-header .logo{font-size:1rem;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:8px}
+.user-info{font-size:.8rem;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-sm{padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:var(--card2);color:var(--muted);cursor:pointer;font-size:.78rem;transition:all .2s}
+.btn-sm:hover{background:var(--accent);color:white;border-color:var(--accent)}
+.btn-sm.admin{border-color:var(--gold);color:var(--gold)}
+.btn-sm.admin:hover{background:var(--gold);color:#000}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:100%;max-width:460px}
+.card h2{font-size:1.3rem;margin-bottom:5px}
+.card p{color:var(--muted);font-size:.85rem;margin-bottom:20px}
+.form-group{margin-bottom:14px}
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:5px}
+input,select{width:100%;padding:10px 14px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem;outline:none;transition:border .2s}
+input:focus,select:focus{border-color:var(--accent)}
+select option{background:var(--card)}
+.btn{width:100%;padding:11px;border-radius:9px;border:none;font-size:.93rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#f97316);color:#000}
+.btn-gold:hover{opacity:.88}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.link-btn{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.83rem;text-decoration:underline}
+.err{color:var(--red);font-size:.8rem;margin-top:8px;text-align:center;min-height:18px}
+.ok{color:var(--green);font-size:.8rem;margin-top:8px;text-align:center}
+.diff-bar-wrap{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.diff-label{font-size:.78rem;color:var(--muted);width:80px;flex-shrink:0}
+.diff-track{flex:1;height:8px;background:var(--card2);border-radius:4px;overflow:hidden}
+.diff-fill{height:100%;border-radius:4px;transition:width .6s,background .6s}
+.diff-value{font-size:.8rem;font-weight:700;min-width:110px;text-align:right}
+.adaptive-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px;width:100%;max-width:950px}
+.adaptive-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.level-pill{padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:700;border:1.5px solid}
+.level-bar{flex:1;min-width:120px;height:8px;background:var(--card2);border-radius:4px;overflow:hidden}
+.level-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .6s}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:760px}
+.course-card{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:20px 16px;cursor:pointer;transition:all .2s;text-align:center}
+.course-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.course-card .icon{font-size:1.9rem;margin-bottom:8px}
+.course-card .title{font-size:.92rem;font-weight:700;margin-bottom:4px}
+.course-card .sub{font-size:.75rem;color:var(--muted)}
+.unit-list{width:100%;max-width:720px}
+.unit-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:9px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s}
+.unit-item:hover{border-color:var(--accent);background:var(--card2)}
+.unit-num{background:var(--accent);color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:700;flex-shrink:0}
+.unit-text .name{font-weight:700;font-size:.92rem}
+.unit-text .topics{font-size:.76rem;color:var(--muted);margin-top:2px}
+.config-box{width:100%;max-width:660px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px}
+.config-box h3{margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:.75rem}
+.toggle-group{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px}
+.toggle-btn{padding:7px 17px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:.83rem;transition:all .2s}
+.toggle-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,.1)}
+.filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.filter-chip{padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:.8rem;text-align:center;transition:all .2s}
+.filter-chip.active{border-color:var(--green);color:var(--green);background:rgba(16,185,129,.08)}
+.question-wrap{width:100%;max-width:860px}
+.q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.q-meta{display:flex;gap:7px;flex-wrap:wrap}
+.badge{padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:700}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--accent)}
+.badge-green{background:rgba(16,185,129,.15);color:var(--green)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-purple{background:rgba(139,92,246,.18);color:#a78bfa}
+.timer{font-size:.95rem;font-weight:700;color:var(--yellow)}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:14px}
+.q-text{font-size:.98rem;line-height:1.75;margin-bottom:20px;white-space:pre-wrap}
+.frq-header{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:14px 18px;margin-bottom:18px}
+.frq-header .frq-title{font-size:.95rem;font-weight:800;color:var(--accent);margin-bottom:4px}
+.frq-header .frq-meta{font-size:.78rem;color:var(--muted)}
+.frq-parts{margin-bottom:16px}
+.frq-part{background:var(--card2);border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--accent)}
+.frq-part-label{font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:6px}
+.frq-part-text{font-size:.92rem;line-height:1.65;color:var(--text)}
+.frq-part-points{font-size:.75rem;color:var(--muted);margin-top:4px}
+.frq-textarea{width:100%;min-height:200px;padding:14px;background:var(--card2);border:1.5px solid var(--border);border-radius:9px;color:var(--text);font-size:.9rem;font-family:inherit;resize:vertical;outline:none;line-height:1.6}
+.frq-textarea:focus{border-color:var(--accent)}
+.q-visual{margin:14px 0 18px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:hidden}
+.q-visual svg{max-width:100%;display:block;margin:0 auto}
+.visual-caption{font-size:.76rem;color:var(--muted);text-align:center;margin-top:8px;font-style:italic}
+.q-visual table{width:100%;border-collapse:collapse;font-size:.88rem;color:var(--text)}
+.q-visual th{padding:8px 12px;border:1px solid var(--border);text-align:center;background:var(--card);color:var(--accent);font-weight:700}
+.q-visual td{padding:7px 12px;border:1px solid var(--border);text-align:center}
+.mcq-options{display:flex;flex-direction:column;gap:9px}
+.mcq-opt{padding:12px 16px;border-radius:9px;border:1.5px solid var(--border);background:var(--card2);cursor:pointer;transition:all .2s;font-size:.91rem;text-align:left;color:var(--text)}
+.mcq-opt:hover{border-color:var(--accent)}
+.mcq-opt.correct{border-color:var(--green);background:rgba(16,185,129,.1);color:var(--green)}
+.mcq-opt.wrong{border-color:var(--red);background:rgba(239,68,68,.09);color:var(--red)}
+.feedback-box{background:var(--card2);border-radius:10px;padding:16px;margin-top:12px;font-size:.88rem;line-height:1.65;border-left:4px solid var(--green)}
+.feedback-box.wrong{border-left-color:var(--red)}
+.feedback-box.frq-grade{border-left-color:var(--accent)}
+.stats-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:80px;background:var(--card2);border-radius:9px;padding:12px;text-align:center;border:1px solid var(--border)}
+.stat-card .val{font-size:1.5rem;font-weight:800}
+.stat-card .lbl{font-size:.7rem;color:var(--muted);margin-top:3px}
+.rush-alert{background:rgba(239,68,68,.1);border:1.5px solid var(--red);border-radius:9px;padding:12px 16px;margin-bottom:14px;color:var(--red);font-size:.85rem;display:none}
+.rush-alert.show{display:block}
+.loading{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted);padding:20px}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.back-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.83rem;display:flex;align-items:center;gap:5px;margin-bottom:16px;transition:color .2s}
+.back-btn:hover{color:var(--accent)}
+.page-title{font-size:1.4rem;font-weight:800;margin-bottom:5px}
+.page-sub{color:var(--muted);font-size:.85rem;margin-bottom:22px}
+.admin-wrap{width:100%;max-width:860px}
+.admin-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px}
+.admin-section h3{font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--gold)}
+.admin-table{width:100%;border-collapse:collapse;font-size:.83rem}
+.admin-table th{text-align:left;padding:8px 10px;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600}
+.admin-table td{padding:9px 10px;border-bottom:1px solid rgba(30,48,80,.7);vertical-align:middle}
+.status-pill{padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:700}
+.status-active{background:rgba(16,185,129,.15);color:var(--green)}
+.status-blocked{background:rgba(239,68,68,.13);color:var(--red)}
+.admin-action{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:.75rem;padding:3px 9px;transition:all .2s;margin-right:4px}
+.admin-action:hover{border-color:var(--accent);color:var(--accent)}
+@media(max-width:560px){.grid-2{grid-template-columns:1fr}.filter-grid{grid-template-columns:1fr}.stats-row{gap:8px}}
+</style>
+</head>
+<body>
+
+<div class="founder-banner">
+  <div class="founder-avatar">AA</div>
+  <div class="founder-text">Founded by <strong>Ayoub Al Hayik</strong> · AP Physics Teacher</div>
+  <span class="ais-badge">AIS EXCLUSIVE</span>
+</div>
+
+<!-- AUTH -->
+<div class="screen active" id="screen-auth" style="padding-top:0">
+  <div style="text-align:center;margin:32px 0 24px">
+    <div style="font-size:2.2rem;margin-bottom:8px">⚛️</div>
+    <div style="font-size:1.55rem;font-weight:800">AP Physics Practice</div>
+    <div style="color:var(--muted);font-size:.84rem;margin-top:4px">American International School · UAE</div>
+  </div>
+  <div class="card" id="login-form">
+    <h2>Student Sign In</h2>
+    <p>Use your AIS student email to access the platform</p>
+    <div class="form-group"><label>AIS Student Email</label><input type="email" id="login-email" placeholder="student@student.aisuae.com"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"/></div>
+    <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+    <div class="err" id="login-err"></div>
+    <div style="text-align:center;margin-top:14px"><button class="link-btn" onclick="showSignup()">New student? Create account</button></div>
+    <div style="text-align:center;margin-top:8px"><button class="link-btn" style="color:var(--gold);font-size:.76rem" onclick="showAdminLogin()">Admin access</button></div>
+  </div>
+  <div class="card" id="signup-form" style="display:none">
+    <h2>Create Account</h2>
+    <p>AIS students only — <strong style="color:var(--accent)">@student.aisuae.com</strong> required</p>
+    <div class="form-group"><label>Full Name</label><input type="text" id="signup-name" placeholder="Your full name"/></div>
+    <div class="form-group"><label>AIS Student Email</label><input type="email" id="signup-email" placeholder="student@student.aisuae.com"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="signup-password" placeholder="Min 6 characters"/></div>
+    <div class="form-group"><label>AP Course</label>
+      <select id="signup-course">
+        <option value="">Select your course...</option>
+        <option value="AP Physics 1">AP Physics 1 (Algebra-Based)</option>
+        <option value="AP Physics 2">AP Physics 2 (Algebra-Based)</option>
+        <option value="AP Physics C: Mechanics">AP Physics C: Mechanics</option>
+        <option value="AP Physics C: E&M">AP Physics C: Electricity & Magnetism</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="doSignup()">Create Account</button>
+    <div class="err" id="signup-err"></div>
+    <div style="text-align:center;margin-top:14px"><button class="link-btn" onclick="showLogin()">Already have an account?</button></div>
+  </div>
+  <div class="card" id="admin-login-form" style="display:none">
+    <h2>👑 Admin Login</h2>
+    <p>Platform founder access only</p>
+    <div class="form-group"><label>Admin Email</label><input type="email" id="admin-email" placeholder="ayooobalhayik1999@gmail.com"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="admin-password" placeholder="••••••••"/></div>
+    <button class="btn btn-gold" onclick="doAdminLogin()">Sign In as Admin</button>
+    <div class="err" id="admin-err"></div>
+    <div style="text-align:center;margin-top:14px"><button class="link-btn" onclick="showLogin()">← Back</button></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="screen top" id="screen-dashboard" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info">
+      <span id="header-name">Student</span>
+      <button class="btn-sm" onclick="goProgress()">📊 Progress</button>
+      <button class="btn-sm admin" id="admin-btn" style="display:none" onclick="showScreen('screen-admin')">👑 Admin</button>
+      <button class="btn-sm" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+  <div style="width:100%;max-width:760px">
+    <div class="adaptive-card">
+      <div class="adaptive-row">
+        <div>
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Your Level</div>
+          <div class="level-pill" id="dash-level-pill" style="border-color:var(--accent);color:var(--accent)">Beginner</div>
+        </div>
+        <div class="level-bar"><div class="level-fill" id="dash-level-fill" style="width:0%"></div></div>
+        <div style="text-align:right">
+          <div style="font-size:.72rem;color:var(--muted)">Difficulty</div>
+          <div id="dash-diff-label" style="font-size:.85rem;font-weight:700;color:var(--yellow)">Standard</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;margin-top:12px;flex-wrap:wrap">
+        <div style="font-size:.78rem;color:var(--muted)">Points: <strong style="color:var(--text)" id="dash-pts">0</strong></div>
+        <div style="font-size:.78rem;color:var(--muted)">Streak: <strong style="color:var(--yellow)" id="dash-streak">0</strong> 🔥</div>
+        <div style="font-size:.78rem;color:var(--muted)">Accuracy: <strong style="color:var(--green)" id="dash-acc">—</strong></div>
+        <div style="font-size:.78rem;color:var(--muted)">Teacher: <strong style="color:var(--accent)">Mr. Ayoub Al Hayik</strong></div>
+      </div>
+    </div>
+    <div class="page-title">Choose Your Course</div>
+    <div class="page-sub">Select the AP Physics course you are registered for at AIS</div>
+    <div class="grid-2">
+      <div class="course-card" onclick="selectCourse('AP Physics 1')"><div class="icon">🔭</div><div class="title">AP Physics 1</div><div class="sub">Algebra-Based · 10 Units</div></div>
+      <div class="course-card" onclick="selectCourse('AP Physics 2')"><div class="icon">⚡</div><div class="title">AP Physics 2</div><div class="sub">Algebra-Based · 7 Units</div></div>
+      <div class="course-card" onclick="selectCourse('AP Physics C: Mechanics')"><div class="icon">🌀</div><div class="title">AP Physics C: Mechanics</div><div class="sub">Calculus-Based · 7 Units</div></div>
+      <div class="course-card" onclick="selectCourse('AP Physics C: E&M')"><div class="icon">🧲</div><div class="title">AP Physics C: E&M</div><div class="sub">Calculus-Based · 5 Units</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- UNITS -->
+<div class="screen top" id="screen-units" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info"><span id="header-name2">Student</span><button class="btn-sm" onclick="goProgress()">📊</button><button class="btn-sm" onclick="doLogout()">Sign Out</button></div>
+  </div>
+  <div class="unit-list">
+    <button class="back-btn" onclick="showScreen('screen-dashboard')">← Back to Courses</button>
+    <div class="page-title" id="units-title">Units</div>
+    <div class="page-sub">College Board aligned — AP Exam Units</div>
+    <div id="units-list"></div>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div class="screen top" id="screen-config" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info"><button class="btn-sm" onclick="goProgress()">📊</button><button class="btn-sm" onclick="doLogout()">Sign Out</button></div>
+  </div>
+  <div class="config-box">
+    <button class="back-btn" onclick="showScreen('screen-units')">← Back to Units</button>
+    <div class="page-title" id="config-unit-name">Unit</div>
+    <div class="page-sub">Configure your practice session</div>
+    <h3>Question Format</h3>
+    <div class="toggle-group" id="format-toggle">
+      <button class="toggle-btn active" onclick="setFormat('MCQ',this)">MCQ</button>
+      <button class="toggle-btn" onclick="setFormat('FRQ',this)">FRQ — AP Style</button>
+    </div>
+    <h3>Question Type</h3>
+    <div class="filter-grid" id="type-filters">
+      <button class="filter-chip active" onclick="toggleType(this,'Theoretical')">📖 Theoretical</button>
+      <button class="filter-chip" onclick="toggleType(this,'Calculation-Based')">🧮 Calculation-Based</button>
+      <button class="filter-chip" onclick="toggleType(this,'Experimental')">🔬 Experimental</button>
+      <button class="filter-chip" onclick="toggleType(this,'Lab-Based')">🧪 Lab-Based</button>
+      <button class="filter-chip" onclick="toggleType(this,'Graph Analysis')">📈 Graph Analysis</button>
+      <button class="filter-chip" onclick="toggleType(this,'Data Analysis')">📊 Data Analysis</button>
+      <button class="filter-chip" onclick="toggleType(this,'Conceptual Reasoning')">💡 Conceptual Reasoning</button>
+      <button class="filter-chip" onclick="toggleType(this,'Derivation')">∫ Derivation</button>
+      <button class="filter-chip" onclick="toggleType(this,'Multi-part Scenario')">🔗 Multi-part Scenario</button>
+      <button class="filter-chip" onclick="toggleType(this,'Diagram-Based')">📐 Diagram-Based</button>
+    </div>
+    <button class="btn btn-primary" onclick="startSession()">Start Practice →</button>
+  </div>
+</div>
+
+<!-- QUESTION -->
+<div class="screen top" id="screen-question" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info">
+      <span id="q-level-pill" style="padding:3px 10px;border-radius:20px;font-size:.76rem;font-weight:700;border:1.5px solid var(--accent);color:var(--accent)">Beginner</span>
+      <span id="q-diff-pill" style="padding:3px 10px;border-radius:20px;font-size:.76rem;font-weight:700;background:rgba(245,158,11,.12);color:var(--yellow)">Standard</span>
+      <div class="timer" id="q-timer">0:00</div>
+      <button class="btn-sm" onclick="endSession()">End Session</button>
+    </div>
+  </div>
+  <div class="question-wrap">
+    <div class="rush-alert" id="rush-alert">⚠️ <strong>Slow down!</strong> You're answering too quickly. Take time to carefully read and think. Rushed answers don't count toward your level.</div>
+    <div class="q-header">
+      <div class="q-meta" id="q-meta"></div>
+      <div style="font-size:.8rem;color:var(--muted)">Q <span id="q-num">1</span> | Difficulty: <span id="q-diff-label" style="color:var(--yellow)">5/10</span></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="val" id="s-correct" style="color:var(--green)">0</div><div class="lbl">Correct</div></div>
+      <div class="stat-card"><div class="val" id="s-wrong" style="color:var(--red)">0</div><div class="lbl">Wrong</div></div>
+      <div class="stat-card"><div class="val" id="s-streak">0</div><div class="lbl">Streak 🔥</div></div>
+      <div class="stat-card"><div class="val" id="s-total">0</div><div class="lbl">Total</div></div>
+      <div class="stat-card"><div class="val" id="s-pts" style="color:var(--yellow)">0</div><div class="lbl">Points</div></div>
+    </div>
+    <div class="diff-bar-wrap">
+      <span class="diff-label">Difficulty</span>
+      <div class="diff-track"><div class="diff-fill" id="diff-fill" style="width:50%;background:#f59e0b"></div></div>
+      <span class="diff-value" id="diff-text" style="color:var(--yellow)">Standard (5/10)</span>
+    </div>
+    <div class="q-card" id="q-card">
+      <div class="loading" id="q-loading"><div class="spinner"></div><div>Generating AP-level question...</div></div>
+      <div id="q-content" style="display:none">
+        <div id="frq-header-box" style="display:none" class="frq-header">
+          <div class="frq-title" id="frq-title">Free-Response Question</div>
+          <div class="frq-meta" id="frq-meta">Show all work for full credit</div>
+        </div>
+        <div class="q-text" id="q-text"></div>
+        <div class="q-visual" id="q-visual" style="display:none">
+          <div id="q-visual-inner"></div>
+          <div class="visual-caption" id="q-visual-caption"></div>
+        </div>
+        <div id="frq-parts-display" style="display:none" class="frq-parts"></div>
+        <div id="mcq-options" class="mcq-options"></div>
+        <div id="frq-section" style="display:none">
+          <label style="font-size:.8rem;color:var(--muted);margin-bottom:8px;display:block">Show all work. Include units. Justify your reasoning.</label>
+          <textarea class="frq-textarea" id="frq-answer" placeholder="Part (a): ...&#10;&#10;Part (b): ...&#10;&#10;Part (c): ..."></textarea>
+          <button class="btn btn-primary" style="margin-top:12px" onclick="submitFRQ()">Submit for AP-Style Grading</button>
+        </div>
+        <div class="feedback-box" id="feedback-box" style="display:none"></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" style="display:none">Next Question →</button>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="screen top" id="screen-progress" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info"><button class="btn-sm" onclick="showScreen('screen-dashboard')">← Dashboard</button><button class="btn-sm" onclick="doLogout()">Sign Out</button></div>
+  </div>
+  <div style="width:100%;max-width:720px">
+    <div class="page-title">Your Progress</div>
+    <div class="page-sub" id="progress-sub">Lifetime performance</div>
+    <div class="stats-row" id="progress-stats"></div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px">
+      <div style="font-weight:700;margin-bottom:12px">Adaptive Level</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div id="prog-level-pill" class="level-pill" style="border-color:var(--accent);color:var(--accent)">Beginner</div>
+        <div class="level-bar"><div class="level-fill" id="prog-level-fill" style="width:0%"></div></div>
+        <div id="prog-level-next" style="font-size:.78rem;color:var(--muted);min-width:110px;text-align:right"></div>
+      </div>
+      <div class="diff-bar-wrap" style="margin-bottom:0">
+        <span class="diff-label">Difficulty</span>
+        <div class="diff-track"><div class="diff-fill" id="prog-diff-fill" style="width:50%;background:#f59e0b"></div></div>
+        <span class="diff-value" id="prog-diff-text" style="color:var(--yellow)">Standard (5/10)</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="sendProgressEmail()">📧 Email Progress Report</button>
+    <div class="ok" id="email-ok"></div>
+    <div class="err" id="email-err"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="screen top" id="screen-admin" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo" style="color:var(--gold)">👑 Admin Panel — Ayoub Al Hayik</div>
+    <div class="user-info"><button class="btn-sm" onclick="showScreen('screen-dashboard')">← Dashboard</button><button class="btn-sm" onclick="doLogout()">Sign Out</button></div>
+  </div>
+  <div class="admin-wrap">
+    <div class="admin-section">
+      <h3>Platform Overview</h3>
+      <div class="stats-row" id="admin-stats"></div>
+    </div>
+    <div class="admin-section">
+      <h3>Student Management</h3>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <input type="text" id="admin-search" placeholder="Search by name or email..." style="flex:1;min-width:180px;padding:8px 12px;font-size:.85rem" oninput="filterStudents()"/>
+        <select id="admin-course-filter" onchange="filterStudents()" style="width:auto;padding:8px 12px;font-size:.85rem">
+          <option value="">All Courses</option>
+          <option>AP Physics 1</option><option>AP Physics 2</option>
+          <option>AP Physics C: Mechanics</option><option>AP Physics C: E&M</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Course</th><th>Level</th><th>Pts</th><th>Accuracy</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="admin-students-tbody"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="admin-section">
+      <h3>Add Student</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input type="text" id="new-student-name" placeholder="Full name" style="flex:1;min-width:150px"/>
+        <input type="email" id="new-student-email" placeholder="student@student.aisuae.com" style="flex:1;min-width:200px"/>
+        <select id="new-student-course" style="width:auto">
+          <option value="">Course...</option>
+          <option>AP Physics 1</option><option>AP Physics 2</option>
+          <option>AP Physics C: Mechanics</option><option>AP Physics C: E&M</option>
+        </select>
+        <button class="btn btn-gold" style="width:auto;padding:8px 18px;margin-top:0" onclick="adminAddStudent()">Add</button>
+      </div>
+      <div class="ok" id="admin-add-ok"></div>
+      <div class="err" id="admin-add-err"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════ CREDENTIALS ══════════
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyBvhZeZ2kFUxXeM8MEP51mKnx7Q0aCGWxA",
+  authDomain:"ap-physics-ais.firebaseapp.com",
+  projectId:"ap-physics-ais",
+  storageBucket:"ap-physics-ais.firebasestorage.app",
+  messagingSenderId:"786364170953",
+  appId:"1:786364170953:web:8cc19b8c5e5496bc07c318"
+};
+const EMAILJS_CONFIG={publicKey:"vMHNW_04omc5A2pLu",serviceId:"service_lcwd4xp",templateId:"template_b9bf7ir"};
+const GEMINI_API_KEY="AIzaSyB7S7QRIVkGKP6ftzwSO9n3ykmPIQ0dAy4";
+const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+const ADMIN_EMAIL="ayooobalhayik1999@gmail.com";
+const AIS_DOMAIN="@student.aisuae.com";
+
+// ══════════ UNITS ══════════
+const UNITS={
+  "AP Physics 1":[
+    {num:1,name:"Kinematics",topics:"Position, velocity, acceleration, projectile motion"},
+    {num:2,name:"Forces and Newton's Laws",topics:"Free-body diagrams, net force, friction, tension"},
+    {num:3,name:"Circular Motion and Gravitation",topics:"Centripetal force, Newton's law of gravitation"},
+    {num:4,name:"Energy",topics:"Work, kinetic energy, potential energy, conservation"},
+    {num:5,name:"Momentum",topics:"Impulse, conservation of momentum, collisions"},
+    {num:6,name:"Simple Harmonic Motion",topics:"Springs, pendulums, period, frequency"},
+    {num:7,name:"Torque and Rotational Motion",topics:"Torque, rotational inertia, angular momentum"},
+    {num:8,name:"Electric Charge and Electric Force",topics:"Charge, Coulomb's law, electric fields"},
+    {num:9,name:"DC Circuits",topics:"Resistance, Ohm's law, series/parallel circuits"},
+    {num:10,name:"Mechanical Waves and Sound",topics:"Wave properties, superposition, standing waves"}
+  ],
+  "AP Physics 2":[
+    {num:1,name:"Fluids",topics:"Pressure, buoyancy, Bernoulli's principle"},
+    {num:2,name:"Thermodynamics",topics:"Temperature, heat, ideal gas, thermodynamic processes"},
+    {num:3,name:"Electric Force, Field, and Potential",topics:"Electric fields, potential, equipotentials"},
+    {num:4,name:"Electric Circuits",topics:"Capacitors, RC circuits, power"},
+    {num:5,name:"Magnetism and Electromagnetic Induction",topics:"Magnetic force, Faraday's law, Lenz's law"},
+    {num:6,name:"Geometric and Physical Optics",topics:"Reflection, refraction, lenses, diffraction"},
+    {num:7,name:"Modern Physics",topics:"Photoelectric effect, atomic models, nuclear physics"}
+  ],
+  "AP Physics C: Mechanics":[
+    {num:1,name:"Kinematics",topics:"Calculus-based motion, derivatives and integrals"},
+    {num:2,name:"Newton's Laws of Motion",topics:"Variable mass, drag forces, differential equations"},
+    {num:3,name:"Work, Energy, and Power",topics:"Work-energy theorem, conservative forces"},
+    {num:4,name:"Systems of Particles and Linear Momentum",topics:"Center of mass, impulse, collisions"},
+    {num:5,name:"Rotation",topics:"Rotational kinematics, moment of inertia, angular momentum"},
+    {num:6,name:"Oscillations",topics:"SHM, damped and driven oscillations"},
+    {num:7,name:"Gravitation",topics:"Gravitational potential, orbital mechanics, Kepler's laws"}
+  ],
+  "AP Physics C: E&M":[
+    {num:1,name:"Electrostatics",topics:"Coulomb's law, Gauss's law, electric potential"},
+    {num:2,name:"Conductors, Capacitors, and Dielectrics",topics:"Capacitance, energy stored, dielectrics"},
+    {num:3,name:"Electric Circuits",topics:"Current, resistance, Kirchhoff's laws, RC circuits"},
+    {num:4,name:"Magnetic Fields",topics:"Biot-Savart law, Ampere's law, magnetic force"},
+    {num:5,name:"Electromagnetism",topics:"Faraday's law, inductance, Maxwell's equations"}
+  ]
+};
+
+const LEVELS=[
+  {name:"Beginner",min:0,max:100,color:"#60a5fa"},
+  {name:"Developing",min:100,max:300,color:"#34d399"},
+  {name:"Proficient",min:300,max:600,color:"#a78bfa"},
+  {name:"Advanced",min:600,max:1000,color:"#f59e0b"},
+  {name:"AP-Ready",min:1000,max:Infinity,color:"#f97316"}
+];
+
+let state={
+  user:null,userData:null,isAdmin:false,
+  course:null,unit:null,format:'MCQ',types:['Theoretical'],
+  difficulty:5,
+  session:{correct:0,wrong:0,streak:0,total:0,startTime:null,questionStartTime:null,rushCount:0,pts:0},
+  currentQ:null,answered:false
+};
+
+// ══════════ FIREBASE ══════════
+let db,auth;
+firebase.initializeApp(FIREBASE_CONFIG);
+db=firebase.firestore();
+auth=firebase.auth();
+auth.onAuthStateChanged(async u=>{
+  if(u){state.user=u;if(u.email===ADMIN_EMAIL){state.isAdmin=true;state.userData={name:'Ayoub Al Hayik',email:ADMIN_EMAIL,points:0,totalCorrect:0,totalWrong:0,totalTime:0,difficulty:5};afterLogin();}else{await loadUserData();}}
+  else{showScreen('screen-auth');}
+});
+emailjs.init(EMAILJS_CONFIG.publicKey);
+
+// ══════════ AUTH ══════════
+function showLogin(){['login-form','signup-form','admin-login-form'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById('login-form').style.display='';}
+function showSignup(){['login-form','signup-form','admin-login-form'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById('signup-form').style.display='';}
+function showAdminLogin(){['login-form','signup-form','admin-login-form'].forEach(i=>document.getElementById(i).style.display='none');document.getElementById('admin-login-form').style.display='';}
+function validateAISEmail(e){return e.toLowerCase().endsWith(AIS_DOMAIN)||e.toLowerCase()===ADMIN_EMAIL;}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const pass=document.getElementById('login-password').value;
+  const err=document.getElementById('login-err');err.textContent='';
+  if(!email||!pass){err.textContent='Please fill all fields.';return;}
+  if(!validateAISEmail(email)){err.textContent='Access restricted to AIS students (@student.aisuae.com) only.';return;}
+  try{await auth.signInWithEmailAndPassword(email,pass);}
+  catch(e){err.textContent=e.message;}
+}
+
+async function doAdminLogin(){
+  const email=document.getElementById('admin-email').value.trim().toLowerCase();
+  const pass=document.getElementById('admin-password').value;
+  const err=document.getElementById('admin-err');err.textContent='';
+  if(email!==ADMIN_EMAIL){err.textContent='Unauthorized.';return;}
+  try{
+    await auth.signInWithEmailAndPassword(email,pass);
+    try{
+      const doc=await db.collection('users').doc(auth.currentUser.uid).get();
+      if(!doc.exists){await db.collection('users').doc(auth.currentUser.uid).set({name:'Ayoub Al Hayik',email:ADMIN_EMAIL,isAdmin:true,points:0,totalCorrect:0,totalWrong:0,totalTime:0,difficulty:5,createdAt:new Date().toISOString()});}
+    }catch(e){}
+    state.isAdmin=true;
+    state.userData={name:'Ayoub Al Hayik',email:ADMIN_EMAIL,points:0,totalCorrect:0,totalWrong:0,totalTime:0,difficulty:5};
+  }catch(e){err.textContent=e.message;}
+}
+
+async function doSignup(){
+  const name=document.getElementById('signup-name').value.trim();
+  const email=document.getElementById('signup-email').value.trim().toLowerCase();
+  const pass=document.getElementById('signup-password').value;
+  const course=document.getElementById('signup-course').value;
+  const err=document.getElementById('signup-err');err.textContent='';
+  if(!name||!email||!pass||!course){err.textContent='Please fill all fields.';return;}
+  if(!email.endsWith(AIS_DOMAIN)){err.textContent='Only AIS student emails (@student.aisuae.com) are allowed.';return;}
+  if(pass.length<6){err.textContent='Password must be at least 6 characters.';return;}
+  try{
+    const cred=await auth.createUserWithEmailAndPassword(email,pass);
+    const ud={name,email,teacher:'Mr. Ayoub Al Hayik',course,points:0,totalCorrect:0,totalWrong:0,totalTime:0,difficulty:5,status:'active',createdAt:new Date().toISOString()};
+    await db.collection('users').doc(cred.user.uid).set(ud);
+    state.userData=ud;
+  }catch(e){err.textContent=e.message;}
+}
+
+async function loadUserData(){
+  try{
+    const doc=await db.collection('users').doc(state.user.uid).get();
+    if(doc.exists){
+      state.userData=doc.data();
+      if(state.userData.status==='blocked'){await auth.signOut();alert('Your account has been suspended. Contact Mr. Ayoub Al Hayik.');return;}
+      state.difficulty=state.userData.difficulty||5;
+      afterLogin();
+    }else{await auth.signOut();showScreen('screen-auth');}
+  }catch(e){console.error(e);}
+}
+
+function afterLogin(){
+  document.getElementById('header-name').textContent=state.isAdmin?'Ayoub Al Hayik':state.userData?.name||'Student';
+  document.getElementById('header-name2').textContent=state.isAdmin?'Ayoub Al Hayik':state.userData?.name||'Student';
+  document.getElementById('admin-btn').style.display=state.isAdmin?'':'none';
+  state.difficulty=state.userData?.difficulty||5;
+  updateAllLevelUI();
+  showScreen('screen-dashboard');
+}
+
+async function doLogout(){try{await auth.signOut();}catch(e){}state.user=null;state.userData=null;state.isAdmin=false;showScreen('screen-auth');}
+
+// ══════════ NAV ══════════
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function selectCourse(c){state.course=c;renderUnits(c);showScreen('screen-units');}
+function renderUnits(c){
+  document.getElementById('units-title').textContent=c;
+  const list=document.getElementById('units-list');list.innerHTML='';
+  UNITS[c].forEach(u=>{list.innerHTML+=`<div class="unit-item" onclick="selectUnit(${u.num},'${u.name.replace(/'/g,"\\'")}')"><div class="unit-num">${u.num}</div><div class="unit-text"><div class="name">${u.name}</div><div class="topics">${u.topics}</div></div></div>`;});
+}
+function selectUnit(num,name){state.unit={num,name};document.getElementById('config-unit-name').textContent=`Unit ${num}: ${name}`;showScreen('screen-config');}
+function setFormat(fmt,btn){state.format=fmt;document.querySelectorAll('#format-toggle .toggle-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+function toggleType(btn,type){btn.classList.toggle('active');state.types=[...document.querySelectorAll('#type-filters .filter-chip.active')].map(b=>b.getAttribute('onclick').match(/'([^']+)'\)/)[1]);if(state.types.length===0){btn.classList.add('active');state.types=[type];}}
+function startSession(){if(state.types.length===0){alert('Select at least one question type.');return;}state.session={correct:0,wrong:0,streak:0,total:0,startTime:Date.now(),questionStartTime:null,rushCount:0,pts:state.userData?.points||0};updateSessionUI();showScreen('screen-question');generateQuestion();}
+
+// ══════════ ADAPTIVE DIFFICULTY ══════════
+function getDifficultyLabel(d){if(d<=2)return'Very Easy';if(d<=4)return'Easy';if(d<=6)return'Standard';if(d<=8)return'Hard';return'AP Exam Level';}
+function getDifficultyColor(d){if(d<=2)return'#60a5fa';if(d<=4)return'#34d399';if(d<=6)return'#f59e0b';if(d<=8)return'#f97316';return'#ef4444';}
+
+function adjustDifficulty(correct){
+  if(correct){if(state.session.streak>=3)state.difficulty=Math.min(10,state.difficulty+1);else state.difficulty=Math.min(10,state.difficulty+0.5);}
+  else{state.difficulty=Math.max(1,state.difficulty-1);}
+  state.difficulty=Math.round(state.difficulty*2)/2;
+  updateDiffUI();saveDifficultyToFirestore();
+}
+
+async function saveDifficultyToFirestore(){
+  if(!state.user||state.isAdmin)return;
+  try{await db.collection('users').doc(state.user.uid).update({difficulty:state.difficulty});}catch(e){}
+}
+
+function updateDiffUI(){
+  const d=state.difficulty;const label=getDifficultyLabel(d);const color=getDifficultyColor(d);const pct=(d/10)*100;
+  document.getElementById('diff-fill').style.width=pct+'%';document.getElementById('diff-fill').style.background=color;
+  document.getElementById('diff-text').textContent=`${label} (${d}/10)`;document.getElementById('diff-text').style.color=color;
+  document.getElementById('q-diff-label').textContent=`${d}/10`;
+  document.getElementById('q-diff-pill').textContent=label;document.getElementById('q-diff-pill').style.color=color;
+  document.getElementById('dash-diff-label').textContent=label;document.getElementById('dash-diff-label').style.color=color;
+  if(document.getElementById('prog-diff-fill')){
+    document.getElementById('prog-diff-fill').style.width=pct+'%';document.getElementById('prog-diff-fill').style.background=color;
+    document.getElementById('prog-diff-text').textContent=`${label} (${d}/10)`;document.getElementById('prog-diff-text').style.color=color;
+  }
+}
+
+// ══════════ QUESTION GENERATION (GEMINI) ══════════
+async function generateQuestion(){
+  state.answered=false;
+  document.getElementById('q-loading').style.display='flex';
+  document.getElementById('q-content').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+  document.getElementById('feedback-box').style.display='none';
+  document.getElementById('rush-alert').classList.remove('show');
+  document.getElementById('q-visual').style.display='none';
+  document.getElementById('frq-parts-display').style.display='none';
+  document.getElementById('frq-header-box').style.display='none';
+
+  const typeStr=state.types[Math.floor(Math.random()*state.types.length)];
+  const levelName=getLevel(state.userData?.points||0).name;
+  const d=state.difficulty;
+  const isCalc=state.course.includes('Physics C');
+  const diffDesc=d<=2?'very simple introductory':d<=4?'straightforward fundamental':d<=6?'standard AP exam':d<=8?'challenging AP hard':'extremely difficult hardest AP';
+
+  // Strong randomization seed to force unique questions every time
+  const seed=Math.floor(Math.random()*999999);
+  const timestamp=Date.now();
+  const randomScenarios={
+    "AP Physics 1":[
+      'a student pushes a box up a ramp','a car brakes suddenly on a highway','a ball is thrown off a cliff','two carts collide on a frictionless track','a yo-yo swings in a circle','a spring launches a block','a child swings on a playground','a satellite orbits Earth','two charged balls repel each other','a guitar string vibrates','a speaker produces sound waves','a roller coaster loops a track','a bicycle wheel spins','a boat floats in a river','a pendulum swings in a clock'
+    ],
+    "AP Physics 2":[
+      'a diver swims to the ocean floor','a hot air balloon rises','a refrigerator operates','a camera focuses light','a solar panel generates electricity','a magnet moves through a coil','a laser beam refracts through glass','a nuclear reactor operates','a patient receives an MRI scan','a pipe carries flowing water','a gas expands in a piston','a rainbow forms after rain','a telescope views stars','a microwave heats food','a hydroelectric dam generates power'
+    ],
+    "AP Physics C: Mechanics":[
+      'a rocket burns fuel and accelerates','a spinning top precesses','a planet orbits the sun elliptically','a bungee jumper falls','a gyroscope in a spacecraft','a variable mass chain falls','a coupled oscillator system','a rigid rod rotates about a pivot','a particle moves under a central force','a damped spring loses energy','a satellite changes orbit','a disk rolls without slipping down an incline','a torsional pendulum oscillates','a meteor enters the atmosphere','a spacecraft performs a gravity assist'
+    ],
+    "AP Physics C: E&M":[
+      'a capacitor charges through a resistor','a solenoid creates a magnetic field','an electron moves through crossed fields','a parallel plate capacitor with a dielectric','a long straight wire carries current','a transformer steps up voltage','a coaxial cable transmits signals','a Van de Graaff generator operates','a cyclotron accelerates protons','an LC circuit oscillates','a Gaussian surface surrounds a charge distribution','a conducting sphere is grounded','a toroid carries current','an antenna transmits radio waves','a photoelectric cell converts light to current'
+    ]
+  };
+  const courseScenarios=randomScenarios[state.course]||randomScenarios["AP Physics 1"];
+  const randomScenario=courseScenarios[Math.floor(Math.random()*courseScenarios.length)]+'_'+seed;
+  const m1=(Math.random()*9+1).toFixed(1);
+  const m2=(Math.random()*19+1).toFixed(1);
+  const v1=(Math.random()*29+1).toFixed(1);
+  const angle=([25,30,37,45,53,60][Math.floor(Math.random()*6)]);
+  const randomNums=[m1,m2,v1,angle];
+
+  // Pick visual type based on question type
+  const alwaysSVG=['Diagram-Based','Theoretical','Conceptual Reasoning','Multi-part Scenario','Experimental','Lab-Based'];
+  const alwaysChart=['Graph Analysis'];
+  const alwaysTable=['Data Analysis'];
+  let vtype='svg';
+  if(alwaysChart.includes(typeStr))vtype='chartjs';
+  else if(alwaysTable.includes(typeStr))vtype='table';
+  else if(Math.random()<0.4)vtype='chartjs';
+
+  const SVG_STYLE=`SVG style rules (MUST follow):
+- viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg"
+- First element: <rect width="560" height="300" fill="#0f1d30"/>
+- Lines/axes: stroke="#94a3b8" stroke-width="1.5"
+- Physics objects (blocks,balls,masses): fill="#2d4a7a" stroke="#60a5fa" stroke-width="2"
+- Force vectors: stroke="#10b981" stroke-width="2.5"
+- Weight/gravity: stroke="#ef4444" stroke-width="2.5"
+- Normal force: stroke="#f59e0b" stroke-width="2.5"
+- Velocity: stroke="#a78bfa" stroke-width="2.5"
+- Electric field lines: stroke="#60a5fa" stroke-width="1.5"
+- Graph data line: stroke="#3b82f6" stroke-width="2.5" fill="none"
+- Text labels: fill="#e2e8f0" font-family="Georgia,serif" font-size="13"
+- Axis labels: fill="#94a3b8" font-size="12"
+- Always add arrowheads using <defs><marker> elements
+- Always include axis labels with units and tick marks for graphs
+- Make it detailed and realistic like a College Board AP exam figure`;
+
+  let prompt;
+  if(state.format==='FRQ'){
+    prompt=`You are a College Board AP Physics exam writer. Generate a UNIQUE FREE-RESPONSE QUESTION exactly like official AP Physics FRQ questions.
+
+UNIQUENESS SEED: ${seed} — timestamp: ${timestamp}
+IMPORTANT: This must be a COMPLETELY DIFFERENT question from any previous ones. Use this specific physical scenario: "${randomScenario}". Use these specific numbers somewhere: ${randomNums.join(', ')}.
+
+Course: ${state.course}
+Unit: Unit ${state.unit.num} — ${state.unit.name} (ONLY topics from this unit)
+Type: ${typeStr}
+Difficulty: ${d}/10 (${diffDesc})
+Student Level: ${levelName}
+${isCalc?'CALCULUS-BASED: use derivatives and integrals.':'ALGEBRA-BASED: no calculus.'}
+
+MANDATORY VISUAL: Include a "${vtype}" visual that is referenced in the question.
+${vtype==='svg'?SVG_STYLE:''}
+${vtype==='chartjs'?'Provide realistic physics data in Chart.js format. Use borderColor:"#3b82f6", backgroundColor:"rgba(59,130,246,0.1)". Include axis labels with units.':''}
+${vtype==='table'?'Provide a data table as HTML string with realistic experimental measurements. Style: dark theme with colors matching the app.':''}
+
+AP FRQ FORMAT (strictly follow):
+- Realistic physical scenario with specific values
+- Given values listed
+- 4-5 parts: (a)(b)(c)(d)(e)
+- Use AP command verbs: Calculate, Derive, Justify, Describe, Sketch, Predict, Design, Explain
+- Skill tags: [Mathematical Routines][Argumentation][Data Analysis][Experimental Design][Making Connections]
+- Point values per part (total 12-15 pts)
+- Progressive difficulty through parts
+
+Return ONLY valid JSON no markdown:
+{
+  "title":"descriptive title",
+  "scenario":"full scenario paragraph with specific numbers and context",
+  "given":["m = 2.0 kg","v₀ = 5.0 m/s","g = 9.8 m/s²"],
+  "parts":[
+    {"label":"(a)","skill":"Mathematical Routines","points":3,"text":"Calculate..."},
+    {"label":"(b)","skill":"Argumentation","points":3,"text":"Justify..."},
+    {"label":"(c)","skill":"Data Analysis","points":3,"text":"Using the figure..."},
+    {"label":"(d)","skill":"Experimental Design","points":3,"text":"Design an experiment..."}
+  ],
+  "totalPoints":12,
+  "rubric":"detailed rubric with points per part",
+  "sampleAnswer":"complete model answer with all work shown",
+  "visual":{
+    "type":"${vtype}",
+    "caption":"Figure 1: descriptive caption",
+    "svgContent":"${vtype==='svg'?'<svg viewBox=\\"0 0 560 300\\" xmlns=\\"http://www.w3.org/2000/svg\\">...COMPLETE DETAILED SVG...</svg>':''}",
+    "tableHTML":"${vtype==='table'?'<table style=\\"width:100%;border-collapse:collapse;color:#e2e8f0;font-size:.88rem\\"><thead><tr style=\\"background:#1e3050\\"><th style=\\"padding:8px;border:1px solid #2d4a7a\\">Col</th></tr></thead><tbody>...</tbody></table>':''}",
+    "chartConfig":${vtype==='chartjs'?'{"type":"scatter","data":{"datasets":[{"label":"measured data","data":[{"x":1,"y":2}],"borderColor":"#3b82f6","backgroundColor":"rgba(59,130,246,0.15)","pointRadius":6}]},"options":{"scales":{"x":{"title":{"display":true,"text":"x-axis (units)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.1)"}},"y":{"title":{"display":true,"text":"y-axis (units)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.1)"}}},"plugins":{"legend":{"labels":{"color":"#94a3b8"}}}}}':'null'}
+  }
+}`;
+  } else {
+    prompt=`You are a College Board AP Physics exam writer. Generate a UNIQUE MULTIPLE-CHOICE QUESTION exactly like official AP Physics MCQ questions.
+
+UNIQUENESS SEED: ${seed} — timestamp: ${timestamp}
+IMPORTANT: This must be a COMPLETELY DIFFERENT question from any previous ones. Set the scenario in: "${randomScenario}". Use these specific values somewhere: ${randomNums.join(', ')}.
+
+Course: ${state.course}
+Unit: Unit ${state.unit.num} — ${state.unit.name} (ONLY topics from this unit — do NOT mix units)
+Type: ${typeStr}
+Difficulty: ${d}/10 (${diffDesc})
+Student Level: ${levelName}
+${isCalc?'CALCULUS-BASED.':'ALGEBRA-BASED.'}
+
+MANDATORY VISUAL: Include a "${vtype}" visual. The question stem MUST reference it (e.g., "The figure above shows...", "According to the graph...", "Using the data in the table...").
+${vtype==='svg'?SVG_STYLE:''}
+${vtype==='chartjs'?'Provide realistic physics data in Chart.js config. Include proper axis labels with units.':''}
+${vtype==='table'?'Provide realistic experimental data table as HTML string.':''}
+
+AP MCQ RULES:
+- Question stem references the visual
+- Exactly 4 choices (A)(B)(C)(D)
+- Distractors test specific common misconceptions
+- Higher difficulty = multi-step reasoning
+
+Return ONLY valid JSON no markdown:
+{
+  "question":"The figure above shows... Which of the following...",
+  "options":["(A) ...","(B) ...","(C) ...","(D) ..."],
+  "answer":"B",
+  "explanation":"Detailed explanation of correct answer and why each wrong choice is incorrect",
+  "visual":{
+    "type":"${vtype}",
+    "caption":"Figure 1: descriptive caption",
+    "svgContent":"${vtype==='svg'?'<svg viewBox=\\"0 0 560 300\\" xmlns=\\"http://www.w3.org/2000/svg\\">...COMPLETE DETAILED SVG...</svg>':''}",
+    "tableHTML":"${vtype==='table'?'<table style=\\"width:100%;border-collapse:collapse;color:#e2e8f0;font-size:.88rem\\"><thead>...</thead><tbody>...</tbody></table>':''}",
+    "chartConfig":${vtype==='chartjs'?'{"type":"line","data":{"labels":[0,1,2,3,4,5],"datasets":[{"label":"Position (m)","data":[0,2,4,6,8,10],"borderColor":"#3b82f6","backgroundColor":"rgba(59,130,246,0.1)","pointRadius":5,"tension":0}]},"options":{"scales":{"x":{"title":{"display":true,"text":"Time (s)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.1)"}},"y":{"title":{"display":true,"text":"Position (m)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.1)"}}},"plugins":{"legend":{"labels":{"color":"#94a3b8"}}}}}':'null'}
+  }
+}`;
+  }
+
+  try{
+    const res=await fetch(GEMINI_URL+'&t='+Date.now(),{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Cache-Control':'no-cache, no-store'},
+      body:JSON.stringify({
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{
+          temperature:1.0,
+          topK:64,
+          topP:0.98,
+          maxOutputTokens:3000,
+          candidateCount:1
+        }
+      })
+    });
+    const data=await res.json();
+    if(data.error){console.error('Gemini API error:',data.error);throw new Error(data.error.message);}
+    let raw=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    raw=raw.replace(/```json[\s\S]*?```/g,m=>m.replace(/```json|```/g,'')).replace(/```/g,'').trim();
+    const js=raw.indexOf('{');const je=raw.lastIndexOf('}');
+    if(js===-1||je===-1)throw new Error('No JSON found in response');
+    state.currentQ=JSON.parse(raw.slice(js,je+1));
+    state.currentQ.type=typeStr;state.currentQ.format=state.format;
+    renderQuestion(state.currentQ);
+  }catch(e){
+    console.error('Gemini error:',e);
+    state.currentQ={
+      format:state.format,type:typeStr,
+      question:'The figure above shows a 3.0 kg block on a frictionless inclined plane at θ = 37°. What is the acceleration of the block along the incline? (sin37°=0.60, cos37°=0.80)',
+      options:['(A) 3.9 m/s²','(B) 5.9 m/s²','(C) 7.8 m/s²','(D) 9.8 m/s²'],
+      answer:'B',
+      explanation:"Newton's 2nd law along incline: a = g sinθ = 9.8 × 0.60 = 5.88 ≈ 5.9 m/s². (A) uses cosθ instead of sinθ. (C) doubles the result. (D) ignores the angle.",
+      visual:{type:'svg',caption:'Figure 1: Block on frictionless inclined plane',
+        svgContent:`<svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="fg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#10b981"/></marker>
+  <marker id="fw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ef4444"/></marker>
+  <marker id="fn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f59e0b"/></marker>
+</defs>
+<rect width="560" height="300" fill="#0f1d30"/>
+<polygon points="80,250 430,250 430,80" fill="#162238" stroke="#3b82f6" stroke-width="2"/>
+<line x1="60" y1="250" x2="450" y2="250" stroke="#94a3b8" stroke-width="2"/>
+<line x1="80" y1="250" x2="65" y2="265" stroke="#94a3b8" stroke-width="1"/><line x1="110" y1="250" x2="95" y2="265" stroke="#94a3b8" stroke-width="1"/>
+<line x1="140" y1="250" x2="125" y2="265" stroke="#94a3b8" stroke-width="1"/><line x1="170" y1="250" x2="155" y2="265" stroke="#94a3b8" stroke-width="1"/>
+<line x1="200" y1="250" x2="185" y2="265" stroke="#94a3b8" stroke-width="1"/><line x1="230" y1="250" x2="215" y2="265" stroke="#94a3b8" stroke-width="1"/>
+<line x1="260" y1="250" x2="245" y2="265" stroke="#94a3b8" stroke-width="1"/><line x1="290" y1="250" x2="275" y2="265" stroke="#94a3b8" stroke-width="1"/>
+<line x1="320" y1="250" x2="305" y2="265" stroke="#94a3b8" stroke-width="1"/><line x1="350" y1="250" x2="335" y2="265" stroke="#94a3b8" stroke-width="1"/>
+<line x1="380" y1="250" x2="365" y2="265" stroke="#94a3b8" stroke-width="1"/><line x1="410" y1="250" x2="395" y2="265" stroke="#94a3b8" stroke-width="1"/>
+<g transform="rotate(-37,255,170)"><rect x="220" y="140" width="70" height="50" fill="#2d4a7a" stroke="#60a5fa" stroke-width="2" rx="3"/><text x="255" y="170" text-anchor="middle" fill="#e2e8f0" font-size="14" font-family="Georgia,serif">m</text></g>
+<line x1="255" y1="168" x2="255" y2="235" stroke="#ef4444" stroke-width="2.5" marker-end="url(#fw)"/>
+<text x="263" y="215" fill="#ef4444" font-size="13" font-family="Georgia,serif">mg</text>
+<line x1="237" y1="155" x2="200" y2="108" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#fn)"/>
+<text x="182" y="105" fill="#f59e0b" font-size="13" font-family="Georgia,serif">N</text>
+<line x1="272" y1="150" x2="325" y2="118" stroke="#10b981" stroke-width="2.5" marker-end="url(#fg)"/>
+<text x="328" y="115" fill="#10b981" font-size="13" font-family="Georgia,serif">a</text>
+<path d="M 398,250 A 32,32 0 0,0 377,224" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="383" y="244" fill="#a78bfa" font-size="14" font-family="Georgia,serif">θ</text>
+<text x="280" y="285" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="Georgia,serif">Figure 1: Block on Frictionless Inclined Plane (θ = 37°, m = 3.0 kg)</text>
+</svg>`}
+    };
+    renderQuestion(state.currentQ);
+  }
+  state.session.questionStartTime=Date.now();
+}
+
+// ══════════ RENDER QUESTION ══════════
+var activeChart=null;
+function renderQuestion(q){
+  document.getElementById('q-loading').style.display='none';
+  document.getElementById('q-content').style.display='block';
+  document.getElementById('q-num').textContent=state.session.total+1;
+  document.getElementById('q-meta').innerHTML=`<span class="badge badge-blue">${state.course}</span><span class="badge badge-green">Unit ${state.unit.num}</span><span class="badge badge-yellow">${q.type}</span><span class="badge badge-red">${q.format}</span><span class="badge badge-purple">Diff ${state.difficulty}/10</span>`;
+
+  if(activeChart){try{activeChart.destroy();}catch(e){}activeChart=null;}
+  const vbox=document.getElementById('q-visual');
+  const vinner=document.getElementById('q-visual-inner');
+  const vcap=document.getElementById('q-visual-caption');
+
+  if(q.visual&&q.visual.type&&q.visual.type!=='none'){
+    vbox.style.display='block';vcap.textContent=q.visual.caption||'';vinner.innerHTML='';
+    if(q.visual.type==='svg'&&q.visual.svgContent){
+      vinner.innerHTML=q.visual.svgContent;
+      const svgEl=vinner.querySelector('svg');
+      if(svgEl){svgEl.style.width='100%';svgEl.style.height='auto';svgEl.removeAttribute('width');svgEl.removeAttribute('height');}
+    }else if(q.visual.type==='table'&&q.visual.tableHTML){
+      vinner.innerHTML=q.visual.tableHTML;
+    }else if(q.visual.type==='chartjs'&&q.visual.chartConfig){
+      const wrap=document.createElement('div');wrap.style.cssText='position:relative;width:100%;height:260px';
+      const canvas=document.createElement('canvas');canvas.id='qc'+Date.now();wrap.appendChild(canvas);vinner.appendChild(wrap);
+      try{
+        const cfg=q.visual.chartConfig;
+        if(cfg.options){cfg.options.responsive=true;cfg.options.maintainAspectRatio=false;
+          if(cfg.options.scales)Object.values(cfg.options.scales).forEach(ax=>{if(!ax.ticks)ax.ticks={};ax.ticks.color='#94a3b8';if(!ax.grid)ax.grid={};ax.grid.color='rgba(148,163,184,0.1)';});
+          if(!cfg.options.plugins)cfg.options.plugins={};cfg.options.plugins.legend={labels:{color:'#94a3b8'}};}
+        activeChart=new Chart(canvas,cfg);
+      }catch(e){vbox.style.display='none';}
+    }
+  }else{vbox.style.display='none';}
+
+  if(q.format==='FRQ'){
+    document.getElementById('frq-header-box').style.display='block';
+    document.getElementById('frq-title').textContent=q.title||'Free-Response Question';
+    document.getElementById('frq-meta').textContent=`${q.totalPoints||12} points · Show all work · Include units`;
+    let txt=q.scenario||q.question||'';
+    if(q.given&&q.given.length)txt+='\n\nGiven: '+q.given.join(' | ');
+    document.getElementById('q-text').textContent=txt;
+    const pd=document.getElementById('frq-parts-display');pd.innerHTML='';
+    if(q.parts&&q.parts.length){pd.style.display='block';q.parts.forEach(p=>{pd.innerHTML+=`<div class="frq-part"><div class="frq-part-label">${p.label} <span style="color:var(--muted);font-weight:400;font-size:.76rem">[${p.skill||''}]</span></div><div class="frq-part-text">${p.text}</div><div class="frq-part-points">${p.points} pt${p.points!==1?'s':''}</div></div>`;});}
+    document.getElementById('mcq-options').style.display='none';
+    document.getElementById('frq-answer').value='';
+    document.getElementById('frq-section').style.display='block';
+  }else{
+    document.getElementById('frq-header-box').style.display='none';
+    document.getElementById('frq-parts-display').style.display='none';
+    document.getElementById('q-text').textContent=q.question||'';
+    const mo=document.getElementById('mcq-options');mo.innerHTML='';mo.style.display='flex';
+    document.getElementById('frq-section').style.display='none';
+    (q.options||[]).forEach((opt,i)=>{const l=['A','B','C','D'][i];mo.innerHTML+=`<button class="mcq-opt" onclick="submitMCQ('${l}',this)" id="opt-${l}">${opt}</button>`;});
+  }
+}
+
+// ══════════ ANSWERS ══════════
+function submitMCQ(chosen,btn){
+  if(state.answered)return;state.answered=true;
+  const elapsed=(Date.now()-state.session.questionStartTime)/1000;const rushed=elapsed<6;
+  document.querySelectorAll('.mcq-opt').forEach(b=>b.style.pointerEvents='none');
+  const correct=chosen===state.currentQ.answer;
+  if(!rushed){recordAnswer(correct);adjustDifficulty(correct);}
+  else{state.session.rushCount++;document.getElementById('rush-alert').classList.add('show');}
+  document.querySelectorAll('.mcq-opt').forEach(b=>{const l=b.id.replace('opt-','');if(l===state.currentQ.answer)b.classList.add('correct');else if(l===chosen&&!correct)b.classList.add('wrong');});
+  const fb=document.getElementById('feedback-box');
+  fb.className='feedback-box'+(correct?'':' wrong');
+  fb.innerHTML=`<strong>${correct?'✅ Correct!':'❌ Incorrect'}</strong><br><br>${state.currentQ.explanation||''}${!rushed&&correct?`<br><br><span style="color:var(--accent);font-size:.82rem">↑ Difficulty: ${getDifficultyLabel(state.difficulty)} (${state.difficulty}/10)</span>`:''}`;
+  fb.style.display='block';document.getElementById('next-btn').style.display='block';updateSessionUI();
+}
+
+async function submitFRQ(){
+  if(state.answered)return;
+  const answer=document.getElementById('frq-answer').value.trim();
+  if(!answer){alert('Please write your answer.');return;}
+  state.answered=true;
+  const elapsed=(Date.now()-state.session.questionStartTime)/1000;const rushed=elapsed<25;
+  if(rushed){state.session.rushCount++;document.getElementById('rush-alert').classList.add('show');}
+  const sb=document.getElementById('frq-section').querySelector('button');sb.disabled=true;sb.textContent='Grading...';
+  const parts=state.currentQ.parts?state.currentQ.parts.map(p=>`${p.label}(${p.points}pts): ${p.text}`).join('\n'):'';
+  const gradingPrompt=`You are an AP Physics Chief Reader. Grade this FRQ strictly using the AP rubric.
+Question: ${state.currentQ.scenario||state.currentQ.question}
+Parts:\n${parts}
+Rubric: ${state.currentQ.rubric||'Grade on accuracy, completeness, units, shown work.'}
+Total: ${state.currentQ.totalPoints||12} points
+Student Answer: ${answer}
+Return ONLY JSON:{"totalEarned":7,"totalPossible":12,"scorePercent":58,"letterGrade":"3","partScores":[{"label":"(a)","earned":2,"possible":3,"feedback":"..."}],"overallFeedback":"AP Chief Reader comment","correct":false}`;
+  try{
+    const res=await fetch(GEMINI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:gradingPrompt}]}],generationConfig:{temperature:0.3,maxOutputTokens:800}})});
+    const data=await res.json();
+    let raw=data.candidates?.[0]?.content?.parts?.[0]?.text||'{}';
+    raw=raw.replace(/```json|```/g,'').trim();
+    const js=raw.indexOf('{');const je=raw.lastIndexOf('}');
+    const graded=JSON.parse(raw.slice(js,je+1));
+    if(!rushed){recordAnswer(graded.correct||graded.scorePercent>=50);adjustDifficulty(graded.scorePercent>=50);}
+    const partsHTML=graded.partScores?graded.partScores.map(p=>`<div style="margin:6px 0;padding:8px 12px;background:var(--card);border-radius:7px"><strong style="color:var(--accent)">${p.label}</strong> <span style="color:${p.earned/p.possible>=0.6?'var(--green)':'var(--red)'}">${p.earned}/${p.possible} pts</span> — ${p.feedback}</div>`).join(''):'';
+    const fb=document.getElementById('feedback-box');
+    fb.className='feedback-box frq-grade';
+    fb.innerHTML=`<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px"><div style="font-size:1.4rem;font-weight:800;color:var(--accent)">${graded.totalEarned}/${graded.totalPossible}</div><div><div style="font-size:.82rem;color:var(--muted)">AP Score</div><div style="font-weight:700;color:${graded.scorePercent>=70?'var(--green)':'var(--yellow)'}">${graded.scorePercent}% · ${graded.letterGrade}/5</div></div></div>${partsHTML}<div style="margin-top:10px;font-size:.85rem;line-height:1.6"><strong>Chief Reader:</strong> ${graded.overallFeedback}</div>`;
+    fb.style.display='block';document.getElementById('next-btn').style.display='block';updateSessionUI();
+  }catch(e){
+    if(!rushed){recordAnswer(true);adjustDifficulty(true);}
+    const fb=document.getElementById('feedback-box');fb.className='feedback-box frq-grade';
+    fb.innerHTML=`<strong>Submitted!</strong> Model Answer:<br><pre style="font-size:.82rem;margin-top:8px;white-space:pre-wrap;color:var(--muted)">${state.currentQ.sampleAnswer||''}</pre>`;
+    fb.style.display='block';document.getElementById('next-btn').style.display='block';updateSessionUI();
+  }
+}
+
+function recordAnswer(correct){
+  if(correct){state.session.correct++;state.session.streak++;const pts=10+Math.round(state.difficulty*2);updatePoints(pts);}
+  else{state.session.wrong++;state.session.streak=0;}
+  state.session.total++;
+}
+
+async function updatePoints(pts){
+  if(!state.userData)return;
+  state.userData.points=(state.userData.points||0)+pts;
+  state.userData.totalCorrect=(state.userData.totalCorrect||0)+1;
+  if(state.user&&!state.isAdmin){
+    try{await db.collection('users').doc(state.user.uid).update({points:state.userData.points,totalCorrect:state.userData.totalCorrect});}catch(e){}
+  }
+  updateAllLevelUI();
+}
+
+function nextQuestion(){generateQuestion();}
+
+// ══════════ LEVEL UI ══════════
+function getLevel(pts){for(let i=LEVELS.length-1;i>=0;i--){if(pts>=LEVELS[i].min)return LEVELS[i];}return LEVELS[0];}
+function getLevelPct(pts){const lv=getLevel(pts);if(lv.max===Infinity)return 100;return Math.round(((pts-lv.min)/(lv.max-lv.min))*100);}
+
+function updateAllLevelUI(){
+  const pts=state.userData?.points||0;const lv=getLevel(pts);const pct=getLevelPct(pts);const nextLv=LEVELS[LEVELS.indexOf(lv)+1];
+  const dpill=document.getElementById('dash-level-pill');if(dpill){dpill.textContent=lv.name;dpill.style.borderColor=lv.color;dpill.style.color=lv.color;}
+  const dfill=document.getElementById('dash-level-fill');if(dfill)dfill.style.width=pct+'%';
+  document.getElementById('dash-pts').textContent=pts;
+  document.getElementById('dash-streak').textContent=state.session.streak||0;
+  const tot=(state.userData?.totalCorrect||0)+(state.userData?.totalWrong||0);
+  const acc=tot>0?Math.round((state.userData.totalCorrect/tot)*100)+'%':'—';
+  document.getElementById('dash-acc').textContent=acc;
+  const qpill=document.getElementById('q-level-pill');if(qpill){qpill.textContent=lv.name;qpill.style.borderColor=lv.color;qpill.style.color=lv.color;}
+  updateDiffUI();
+}
+
+function updateSessionUI(){
+  document.getElementById('s-correct').textContent=state.session.correct;
+  document.getElementById('s-wrong').textContent=state.session.wrong;
+  document.getElementById('s-streak').textContent=state.session.streak;
+  document.getElementById('s-total').textContent=state.session.total;
+  document.getElementById('s-pts').textContent=state.userData?.points||0;
+  updateAllLevelUI();
+}
+
+// ══════════ TIMER ══════════
+let timerInterval;
+new MutationObserver(m=>m.forEach(x=>{
+  if(x.target.id==='screen-question'&&x.target.classList.contains('active')){
+    clearInterval(timerInterval);
+    timerInterval=setInterval(()=>{
+      if(!state.session.startTime)return;
+      const s=Math.round((Date.now()-state.session.startTime)/1000);
+      document.getElementById('q-timer').textContent=`${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+    },1000);
+  }
+})).observe(document.getElementById('screen-question'),{attributes:true,attributeFilter:['class']});
+
+function endSession(){clearInterval(timerInterval);if(confirm('End this session?')){showScreen('screen-dashboard');updateAllLevelUI();}}
+
+// ══════════ PROGRESS ══════════
+function goProgress(){renderProgress();showScreen('screen-progress');}
+function renderProgress(){
+  const d=state.userData||{};const pts=d.points||0;const lv=getLevel(pts);const pct=getLevelPct(pts);const nextLv=LEVELS[LEVELS.indexOf(lv)+1];
+  const tot=(d.totalCorrect||0)+(d.totalWrong||0);const acc=tot>0?Math.round(d.totalCorrect/tot*100):0;const mins=Math.round((d.totalTime||0)/60);
+  document.getElementById('progress-sub').textContent=`${d.name||''} · ${d.course||''} · Mr. Ayoub Al Hayik`;
+  document.getElementById('progress-stats').innerHTML=`
+    <div class="stat-card"><div class="val" style="color:var(--green)">${d.totalCorrect||0}</div><div class="lbl">Correct</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--red)">${d.totalWrong||0}</div><div class="lbl">Wrong</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--accent)">${acc}%</div><div class="lbl">Accuracy</div></div>
+    <div class="stat-card"><div class="val">${mins}</div><div class="lbl">Minutes</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--yellow)">${pts}</div><div class="lbl">Points</div></div>`;
+  const ppill=document.getElementById('prog-level-pill');ppill.textContent=lv.name;ppill.style.borderColor=lv.color;ppill.style.color=lv.color;
+  document.getElementById('prog-level-fill').style.width=pct+'%';
+  document.getElementById('prog-level-next').textContent=nextLv?`${pts}/${nextLv.min} → ${nextLv.name}`:'🏆 AP-Ready!';
+  const dc=getDifficultyColor(state.difficulty);
+  document.getElementById('prog-diff-fill').style.width=(state.difficulty/10*100)+'%';
+  document.getElementById('prog-diff-fill').style.background=dc;
+  document.getElementById('prog-diff-text').textContent=`${getDifficultyLabel(state.difficulty)} (${state.difficulty}/10)`;
+  document.getElementById('prog-diff-text').style.color=dc;
+  document.getElementById('email-ok').textContent='';document.getElementById('email-err').textContent='';
+}
+
+async function sendProgressEmail(){
+  const d=state.userData||{};const pts=d.points||0;const tot=(d.totalCorrect||0)+(d.totalWrong||0);const acc=tot>0?Math.round(d.totalCorrect/tot*100):0;const lv=getLevel(pts);
+  const params={to_email:d.email||state.user?.email,student_name:d.name||'Student',teacher_name:'Mr. Ayoub Al Hayik',course:d.course||'',level:lv.name,difficulty_level:`${getDifficultyLabel(state.difficulty)} (${state.difficulty}/10)`,points:pts,total_correct:d.totalCorrect||0,total_wrong:d.totalWrong||0,accuracy:acc+'%',time_spent:Math.round((d.totalTime||0)/60)+' minutes'};
+  try{
+    await emailjs.send(EMAILJS_CONFIG.serviceId,EMAILJS_CONFIG.templateId,params);
+    document.getElementById('email-ok').textContent='✅ Report sent to '+params.to_email+'!';
+  }catch(e){document.getElementById('email-err').textContent='Error: '+e.message;}
+}
+
+// ══════════ ADMIN ══════════
+let allStudentsCache=[];
+async function loadAdminData(){
+  try{
+    const snap=await db.collection('users').get();
+    allStudentsCache=[];snap.forEach(doc=>{const d=doc.data();d._uid=doc.id;allStudentsCache.push(d);});
+    renderAdminStats();renderAdminStudents(allStudentsCache);
+  }catch(e){console.error(e);}
+}
+
+function renderAdminStats(){
+  const total=allStudentsCache.length;const active=allStudentsCache.filter(s=>s.status!=='blocked').length;
+  const avgAcc=total?Math.round(allStudentsCache.reduce((a,s)=>{const t=(s.totalCorrect||0)+(s.totalWrong||0);return a+(t>0?(s.totalCorrect||0)/t:0);},0)/total*100):0;
+  document.getElementById('admin-stats').innerHTML=`
+    <div class="stat-card"><div class="val" style="color:var(--accent)">${total}</div><div class="lbl">Students</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--green)">${active}</div><div class="lbl">Active</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--yellow)">${avgAcc}%</div><div class="lbl">Avg Accuracy</div></div>`;
+}
+
+function renderAdminStudents(students){
+  const tbody=document.getElementById('admin-students-tbody');
+  if(!students.length){tbody.innerHTML='<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">No students found</td></tr>';return;}
+  tbody.innerHTML=students.map(s=>{
+    const tot=(s.totalCorrect||0)+(s.totalWrong||0);const acc=tot>0?Math.round(s.totalCorrect/tot*100)+'%':'—';
+    const lv=getLevel(s.points||0).name;const status=s.status||'active';
+    return `<tr>
+      <td style="font-weight:600">${s.name||'—'}</td>
+      <td style="color:var(--muted);font-size:.78rem">${s.email||'—'}</td>
+      <td style="font-size:.8rem">${s.course||'—'}</td>
+      <td style="font-size:.8rem">${lv} <span style="color:var(--muted)">(D:${s.difficulty||5})</span></td>
+      <td style="color:var(--yellow)">${s.points||0}</td>
+      <td>${acc}</td>
+      <td><span class="status-pill status-${status}">${status}</span></td>
+      <td>
+        <button class="admin-action" onclick="adminToggleBlock('${s._uid}','${status}')">${status==='blocked'?'Unblock':'Block'}</button>
+        <button class="admin-action" onclick="adminResetProgress('${s._uid}')">Reset</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterStudents(){
+  const q=document.getElementById('admin-search').value.toLowerCase();
+  const course=document.getElementById('admin-course-filter').value;
+  renderAdminStudents(allStudentsCache.filter(s=>(!q||s.name?.toLowerCase().includes(q)||s.email?.toLowerCase().includes(q))&&(!course||s.course===course)));
+}
+
+async function adminToggleBlock(uid,cur){
+  const ns=cur==='blocked'?'active':'blocked';
+  if(!confirm(`${ns==='blocked'?'Block':'Unblock'} this student?`))return;
+  try{await db.collection('users').doc(uid).update({status:ns});}catch(e){}
+  const s=allStudentsCache.find(x=>x._uid===uid);if(s)s.status=ns;
+  renderAdminStudents(allStudentsCache);renderAdminStats();
+}
+
+async function adminResetProgress(uid){
+  if(!confirm('Reset this student\'s progress?'))return;
+  try{await db.collection('users').doc(uid).update({points:0,totalCorrect:0,totalWrong:0,totalTime:0,difficulty:5});}catch(e){}
+  const s=allStudentsCache.find(x=>x._uid===uid);if(s){s.points=0;s.totalCorrect=0;s.totalWrong=0;s.difficulty=5;}
+  renderAdminStudents(allStudentsCache);
+}
+
+async function adminAddStudent(){
+  const name=document.getElementById('new-student-name').value.trim();
+  const email=document.getElementById('new-student-email').value.trim().toLowerCase();
+  const course=document.getElementById('new-student-course').value;
+  document.getElementById('admin-add-ok').textContent='';document.getElementById('admin-add-err').textContent='';
+  if(!name||!email||!course){document.getElementById('admin-add-err').textContent='Fill all fields.';return;}
+  if(!email.endsWith(AIS_DOMAIN)){document.getElementById('admin-add-err').textContent='Must be @student.aisuae.com email.';return;}
+  document.getElementById('admin-add-ok').textContent=`✅ ${name} can now sign up with ${email}.`;
+  document.getElementById('new-student-name').value='';document.getElementById('new-student-email').value='';document.getElementById('new-student-course').value='';
+}
+
+new MutationObserver(m=>m.forEach(x=>{if(x.target.id==='screen-admin'&&x.target.classList.contains('active'))loadAdminData();})).observe(document.getElementById('screen-admin'),{attributes:true,attributeFilter:['class']});
+</script>
+</body>
+</html>
