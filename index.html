@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AP Physics Practice — AIS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-auth-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.7.1/firebase-firestore-compat.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--bg:#07101f;--card:#0f1d30;--card2:#162238;--accent:#3b82f6;--accent2:#6366f1;--gold:#f59e0b;--green:#10b981;--red:#ef4444;--yellow:#fbbf24;--text:#f1f5f9;--muted:#94a3b8;--border:#1e3050;--radius:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.screen{display:none;min-height:100vh;padding:20px}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.screen.active.top{justify-content:flex-start}
+.founder-banner{width:100%;background:linear-gradient(135deg,#0f1d30,#162238);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:center;gap:10px;position:sticky;top:0;z-index:100}
+.founder-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#f97316);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.78rem;color:#000;flex-shrink:0}
+.founder-text{font-size:.8rem;color:var(--muted)}
+.founder-text strong{color:var(--gold);font-size:.85rem}
+.ais-badge{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--gold);font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.04em}
+.app-header{width:100%;max-width:950px;display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding:12px 18px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border)}
+.app-header .logo{font-size:1rem;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:8px}
+.user-info{font-size:.8rem;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn-sm{padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:var(--card2);color:var(--muted);cursor:pointer;font-size:.78rem;transition:all .2s}
+.btn-sm:hover{background:var(--accent);color:white;border-color:var(--accent)}
+.btn-sm.admin{border-color:var(--gold);color:var(--gold)}
+.btn-sm.admin:hover{background:var(--gold);color:#000}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:100%;max-width:460px}
+.card h2{font-size:1.3rem;margin-bottom:5px}
+.card p{color:var(--muted);font-size:.85rem;margin-bottom:20px}
+.form-group{margin-bottom:14px}
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:5px}
+input,select{width:100%;padding:10px 14px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem;outline:none;transition:border .2s}
+input:focus,select:focus{border-color:var(--accent)}
+select option{background:var(--card)}
+.btn{width:100%;padding:11px;border-radius:9px;border:none;font-size:.93rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#f97316);color:#000}
+.btn-gold:hover{opacity:.88}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.link-btn{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.83rem;text-decoration:underline}
+.err{color:var(--red);font-size:.8rem;margin-top:8px;text-align:center;min-height:18px}
+.ok{color:var(--green);font-size:.8rem;margin-top:8px;text-align:center}
+.diff-bar-wrap{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.diff-label{font-size:.78rem;color:var(--muted);width:80px;flex-shrink:0}
+.diff-track{flex:1;height:8px;background:var(--card2);border-radius:4px;overflow:hidden}
+.diff-fill{height:100%;border-radius:4px;transition:width .6s,background .6s}
+.diff-value{font-size:.8rem;font-weight:700;min-width:110px;text-align:right}
+.adaptive-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:20px;width:100%;max-width:950px}
+.adaptive-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.level-pill{padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:700;border:1.5px solid}
+.level-bar{flex:1;min-width:120px;height:8px;background:var(--card2);border-radius:4px;overflow:hidden}
+.level-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .6s}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:760px}
+.course-card{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:20px 16px;cursor:pointer;transition:all .2s;text-align:center}
+.course-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.course-card .icon{font-size:1.9rem;margin-bottom:8px}
+.course-card .title{font-size:.92rem;font-weight:700;margin-bottom:4px}
+.course-card .sub{font-size:.75rem;color:var(--muted)}
+.unit-list{width:100%;max-width:720px}
+.unit-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:9px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s}
+.unit-item:hover{border-color:var(--accent);background:var(--card2)}
+.unit-num{background:var(--accent);color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:700;flex-shrink:0}
+.unit-text .name{font-weight:700;font-size:.92rem}
+.unit-text .topics{font-size:.76rem;color:var(--muted);margin-top:2px}
+.config-box{width:100%;max-width:660px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px}
+.config-box h3{margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:.75rem}
+.toggle-group{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px}
+.toggle-btn{padding:7px 17px;border-radius:20px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:.83rem;transition:all .2s}
+.toggle-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,.1)}
+.filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.filter-chip{padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:.8rem;text-align:center;transition:all .2s}
+.filter-chip.active{border-color:var(--green);color:var(--green);background:rgba(16,185,129,.08)}
+.question-wrap{width:100%;max-width:860px}
+.q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.q-meta{display:flex;gap:7px;flex-wrap:wrap}
+.badge{padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:700}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--accent)}
+.badge-green{background:rgba(16,185,129,.15);color:var(--green)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-purple{background:rgba(139,92,246,.18);color:#a78bfa}
+.timer{font-size:.95rem;font-weight:700;color:var(--yellow)}
+.q-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:14px}
+.q-text{font-size:.98rem;line-height:1.75;margin-bottom:20px;white-space:pre-wrap}
+.frq-header{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:14px 18px;margin-bottom:18px}
+.frq-header .frq-title{font-size:.95rem;font-weight:800;color:var(--accent);margin-bottom:4px}
+.frq-header .frq-meta{font-size:.78rem;color:var(--muted)}
+.frq-parts{margin-bottom:16px}
+.frq-part{background:var(--card2);border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--accent)}
+.frq-part-label{font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:6px}
+.frq-part-text{font-size:.92rem;line-height:1.65;color:var(--text)}
+.frq-part-points{font-size:.75rem;color:var(--muted);margin-top:4px}
+.frq-textarea{width:100%;min-height:200px;padding:14px;background:var(--card2);border:1.5px solid var(--border);border-radius:9px;color:var(--text);font-size:.9rem;font-family:inherit;resize:vertical;outline:none;line-height:1.6}
+.frq-textarea:focus{border-color:var(--accent)}
+.q-visual{margin:14px 0 18px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:hidden}
+.q-visual svg{max-width:100%;display:block;margin:0 auto}
+.visual-caption{font-size:.76rem;color:var(--muted);text-align:center;margin-top:8px;font-style:italic}
+.q-visual table{width:100%;border-collapse:collapse;font-size:.88rem;color:var(--text)}
+.q-visual th{padding:8px 12px;border:1px solid var(--border);text-align:center;background:var(--card);color:var(--accent);font-weight:700}
+.q-visual td{padding:7px 12px;border:1px solid var(--border);text-align:center}
+.mcq-options{display:flex;flex-direction:column;gap:9px}
+.mcq-opt{padding:12px 16px;border-radius:9px;border:1.5px solid var(--border);background:var(--card2);cursor:pointer;transition:all .2s;font-size:.91rem;text-align:left;color:var(--text)}
+.mcq-opt:hover{border-color:var(--accent)}
+.mcq-opt.correct{border-color:var(--green);background:rgba(16,185,129,.1);color:var(--green)}
+.mcq-opt.wrong{border-color:var(--red);background:rgba(239,68,68,.09);color:var(--red)}
+.feedback-box{background:var(--card2);border-radius:10px;padding:16px;margin-top:12px;font-size:.88rem;line-height:1.65;border-left:4px solid var(--green)}
+.feedback-box.wrong{border-left-color:var(--red)}
+.feedback-box.frq-grade{border-left-color:var(--accent)}
+.stats-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:80px;background:var(--card2);border-radius:9px;padding:12px;text-align:center;border:1px solid var(--border)}
+.stat-card .val{font-size:1.5rem;font-weight:800}
+.stat-card .lbl{font-size:.7rem;color:var(--muted);margin-top:3px}
+.rush-alert{background:rgba(239,68,68,.1);border:1.5px solid var(--red);border-radius:9px;padding:12px 16px;margin-bottom:14px;color:var(--red);font-size:.85rem;display:none}
+.rush-alert.show{display:block}
+.loading{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--muted);padding:20px}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.back-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.83rem;display:flex;align-items:center;gap:5px;margin-bottom:16px;transition:color .2s}
+.back-btn:hover{color:var(--accent)}
+.page-title{font-size:1.4rem;font-weight:800;margin-bottom:5px}
+.page-sub{color:var(--muted);font-size:.85rem;margin-bottom:22px}
+.admin-wrap{width:100%;max-width:860px}
+.admin-section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px}
+.admin-section h3{font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--gold)}
+.admin-table{width:100%;border-collapse:collapse;font-size:.83rem}
+.admin-table th{text-align:left;padding:8px 10px;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600}
+.admin-table td{padding:9px 10px;border-bottom:1px solid rgba(30,48,80,.7);vertical-align:middle}
+.status-pill{padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:700}
+.status-active{background:rgba(16,185,129,.15);color:var(--green)}
+.status-blocked{background:rgba(239,68,68,.13);color:var(--red)}
+.admin-action{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:.75rem;padding:3px 9px;transition:all .2s;margin-right:4px}
+.admin-action:hover{border-color:var(--accent);color:var(--accent)}
+@media(max-width:560px){.grid-2{grid-template-columns:1fr}.filter-grid{grid-template-columns:1fr}.stats-row{gap:8px}}
+</style>
+</head>
+<body>
+
+<div class="founder-banner">
+  <div class="founder-avatar">AA</div>
+  <div class="founder-text">Founded by <strong>Ayoub Al Hayik</strong> · AP Physics Teacher</div>
+  <span class="ais-badge">AIS EXCLUSIVE</span>
+</div>
+
+<div class="screen active" id="screen-auth" style="padding-top:0">
+  <div style="text-align:center;margin:32px 0 24px">
+    <div style="font-size:2.2rem;margin-bottom:8px">⚛️</div>
+    <div style="font-size:1.55rem;font-weight:800">AP Physics Practice</div>
+    <div style="color:var(--muted);font-size:.84rem;margin-top:4px">American International School · UAE</div>
+  </div>
+  <div class="card" id="login-form">
+    <h2>Student Sign In</h2>
+    <p>Use your AIS student email to access the platform</p>
+    <div class="form-group"><label>AIS Student Email</label><input type="email" id="login-email" placeholder="student@student.aisuae.com"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"/></div>
+    <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+    <div class="err" id="login-err"></div>
+    <div style="text-align:center;margin-top:14px"><button class="link-btn" onclick="showSignup()">New student? Create account</button></div>
+    <div style="text-align:center;margin-top:8px"><button class="link-btn" style="color:var(--gold);font-size:.76rem" onclick="showAdminLogin()">Admin access</button></div>
+  </div>
+  <div class="card" id="signup-form" style="display:none">
+    <h2>Create Account</h2>
+    <p>AIS students only — <strong style="color:var(--accent)">@student.aisuae.com</strong> required</p>
+    <div class="form-group"><label>Full Name</label><input type="text" id="signup-name" placeholder="Your full name"/></div>
+    <div class="form-group"><label>AIS Student Email</label><input type="email" id="signup-email" placeholder="student@student.aisuae.com"/></div>
+    <div class="form-group"><label>Password</label><input type="password" id="signup-password" placeholder="Min 6 characters"/></div>
+    <div class="form-group"><label>AP Course</label>
+      <select id="signup-course">
+        <option value="">Select your course...</option>
+        <option value="AP Physics 1">AP Physics 1 (Algebra-Based)</option>
+        <option value="AP Physics 2">AP Physics 2 (Algebra-Based)</option>
+        <option value="AP Physics C: Mechanics">AP Physics C: Mechanics</option>
+        <option value="AP Physics C: E&M">AP Physics C: Electricity & Magnetism</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="doSignup()">Create Account</button>
+    <div class="err" id="signup-err"></div>
+    <div style="text-align:center;margin-top:14px"><button class="link-btn" onclick="showLogin()">Already have an account?</button></div>
+  </div>
+  <div class="card" id="admin-login-form" style="display:none">
+    <h2>👑 Admin Login</h2>
+    <p>Platform founder access only</p>
+    <div class="form-group">
+      <label>Admin Email</label>
+      <input type="email" id="admin-email" placeholder="ayooobalhayik1999@gmail.com" value="ayooobalhayik1999@gmail.com"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="admin-password" placeholder="••••••••"/>
+    </div>
+    <button class="btn btn-gold" onclick="doAdminLogin()">Sign In as Admin</button>
+    <div class="err" id="admin-err"></div>
+    <div style="text-align:center;margin-top:14px"><button class="link-btn" onclick="showLogin()">← Back</button></div>
+  </div>
+</div>
+
+<div class="screen top" id="screen-dashboard" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info">
+      <span id="header-name">Student</span>
+      <button class="btn-sm" onclick="goProgress()">📊 Progress</button>
+      <button class="btn-sm admin" id="admin-btn" style="display:none" onclick="showScreen('screen-admin')">👑 Admin</button>
+      <button class="btn-sm" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+  <div style="width:100%;max-width:760px">
+    <div class="adaptive-card">
+      <div class="adaptive-row">
+        <div>
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Your Level</div>
+          <div class="level-pill" id="dash-level-pill" style="border-color:var(--accent);color:var(--accent)">Beginner</div>
+        </div>
+        <div class="level-bar"><div class="level-fill" id="dash-level-fill" style="width:0%"></div></div>
+        <div style="text-align:right">
+          <div style="font-size:.72rem;color:var(--muted)">Difficulty</div>
+          <div id="dash-diff-label" style="font-size:.85rem;font-weight:700;color:var(--yellow)">Standard</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;margin-top:12px;flex-wrap:wrap">
+        <div style="font-size:.78rem;color:var(--muted)">Points: <strong style="color:var(--text)" id="dash-pts">0</strong></div>
+        <div style="font-size:.78rem;color:var(--muted)">Streak: <strong style="color:var(--yellow)" id="dash-streak">0</strong> 🔥</div>
+        <div style="font-size:.78rem;color:var(--muted)">Accuracy: <strong style="color:var(--green)" id="dash-acc">—</strong></div>
+        <div style="font-size:.78rem;color:var(--muted)">Teacher: <strong style="color:var(--accent)">Mr. Ayoub Al Hayik</strong></div>
+      </div>
+    </div>
+    <div class="page-title">Choose Your Course</div>
+    <div class="page-sub">Select the AP Physics course you are registered for at AIS</div>
+    <div class="grid-2">
+      <div class="course-card" onclick="selectCourse('AP Physics 1')"><div class="icon">🔭</div><div class="title">AP Physics 1</div><div class="sub">Algebra-Based · 10 Units</div></div>
+      <div class="course-card" onclick="selectCourse('AP Physics 2')"><div class="icon">⚡</div><div class="title">AP Physics 2</div><div class="sub">Algebra-Based · 7 Units</div></div>
+      <div class="course-card" onclick="selectCourse('AP Physics C: Mechanics')"><div class="icon">🌀</div><div class="title">AP Physics C: Mechanics</div><div class="sub">Calculus-Based · 7 Units</div></div>
+      <div class="course-card" onclick="selectCourse('AP Physics C: E&M')"><div class="icon">🧲</div><div class="title">AP Physics C: E&M</div><div class="sub">Calculus-Based · 5 Units</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="screen top" id="screen-units" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info"><span id="header-name2">Student</span><button class="btn-sm" onclick="goProgress()">📊</button><button class="btn-sm" onclick="doLogout()">Sign Out</button></div>
+  </div>
+  <div class="unit-list">
+    <button class="back-btn" onclick="showScreen('screen-dashboard')">← Back to Courses</button>
+    <div class="page-title" id="units-title">Units</div>
+    <div class="page-sub">College Board aligned — AP Exam Units</div>
+    <div id="units-list"></div>
+  </div>
+</div>
+
+<div class="screen top" id="screen-config" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info"><button class="btn-sm" onclick="goProgress()">📊</button><button class="btn-sm" onclick="doLogout()">Sign Out</button></div>
+  </div>
+  <div class="config-box">
+    <button class="back-btn" onclick="showScreen('screen-units')">← Back to Units</button>
+    <div class="page-title" id="config-unit-name">Unit</div>
+    <div class="page-sub">Configure your practice session</div>
+    <h3>Question Format</h3>
+    <div class="toggle-group" id="format-toggle">
+      <button class="toggle-btn active" onclick="setFormat('MCQ',this)">MCQ</button>
+      <button class="toggle-btn" onclick="setFormat('FRQ',this)">FRQ — AP Style</button>
+    </div>
+    <h3>Question Type</h3>
+    <div class="filter-grid" id="type-filters">
+      <button class="filter-chip active" onclick="toggleType(this,'Theoretical')">📖 Theoretical</button>
+      <button class="filter-chip" onclick="toggleType(this,'Calculation-Based')">🧮 Calculation-Based</button>
+      <button class="filter-chip" onclick="toggleType(this,'Experimental')">🔬 Experimental</button>
+      <button class="filter-chip" onclick="toggleType(this,'Lab-Based')">🧪 Lab-Based</button>
+      <button class="filter-chip" onclick="toggleType(this,'Graph Analysis')">📈 Graph Analysis</button>
+      <button class="filter-chip" onclick="toggleType(this,'Data Analysis')">📊 Data Analysis</button>
+      <button class="filter-chip" onclick="toggleType(this,'Conceptual Reasoning')">💡 Conceptual Reasoning</button>
+      <button class="filter-chip" onclick="toggleType(this,'Derivation')">∫ Derivation</button>
+      <button class="filter-chip" onclick="toggleType(this,'Multi-part Scenario')">🔗 Multi-part Scenario</button>
+      <button class="filter-chip" onclick="toggleType(this,'Diagram-Based')">📐 Diagram-Based</button>
+    </div>
+    <button class="btn btn-primary" onclick="startSession()">Start Practice →</button>
+  </div>
+</div>
+
+<div class="screen top" id="screen-question" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info">
+      <span id="q-level-pill" style="padding:3px 10px;border-radius:20px;font-size:.76rem;font-weight:700;border:1.5px solid var(--accent);color:var(--accent)">Beginner</span>
+      <span id="q-diff-pill" style="padding:3px 10px;border-radius:20px;font-size:.76rem;font-weight:700;background:rgba(245,158,11,.12);color:var(--yellow)">Standard</span>
+      <div class="timer" id="q-timer">0:00</div>
+      <button class="btn-sm" onclick="endSession()">End Session</button>
+    </div>
+  </div>
+  <div class="question-wrap">
+    <div class="rush-alert" id="rush-alert">⚠️ <strong>Slow down!</strong> You're answering too quickly. Take time to carefully read and think. Rushed answers don't count toward your level.</div>
+    <div class="q-header">
+      <div class="q-meta" id="q-meta"></div>
+      <div style="font-size:.8rem;color:var(--muted)">Q <span id="q-num">1</span> | Difficulty: <span id="q-diff-label" style="color:var(--yellow)">5/10</span></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="val" id="s-correct" style="color:var(--green)">0</div><div class="lbl">Correct</div></div>
+      <div class="stat-card"><div class="val" id="s-wrong" style="color:var(--red)">0</div><div class="lbl">Wrong</div></div>
+      <div class="stat-card"><div class="val" id="s-streak">0</div><div class="lbl">Streak 🔥</div></div>
+      <div class="stat-card"><div class="val" id="s-total">0</div><div class="lbl">Total</div></div>
+      <div class="stat-card"><div class="val" id="s-pts" style="color:var(--yellow)">0</div><div class="lbl">Points</div></div>
+    </div>
+    <div class="diff-bar-wrap">
+      <span class="diff-label">Difficulty</span>
+      <div class="diff-track"><div class="diff-fill" id="diff-fill" style="width:50%;background:#f59e0b"></div></div>
+      <span class="diff-value" id="diff-text" style="color:var(--yellow)">Standard (5/10)</span>
+    </div>
+    <div class="q-card" id="q-card">
+      <div class="loading" id="q-loading"><div class="spinner"></div><div>Generating AP-level question...</div></div>
+      <div id="q-content" style="display:none">
+        <div id="frq-header-box" style="display:none" class="frq-header">
+          <div class="frq-title" id="frq-title">Free-Response Question</div>
+          <div class="frq-meta" id="frq-meta">Show all work for full credit</div>
+        </div>
+        <div class="q-text" id="q-text"></div>
+        <div class="q-visual" id="q-visual" style="display:none">
+          <div id="q-visual-inner"></div>
+          <div class="visual-caption" id="q-visual-caption"></div>
+        </div>
+        <div id="frq-parts-display" style="display:none" class="frq-parts"></div>
+        <div id="mcq-options" class="mcq-options"></div>
+        <div id="frq-section" style="display:none">
+          <label style="font-size:.8rem;color:var(--muted);margin-bottom:8px;display:block">Show all work. Include units. Justify your reasoning.</label>
+          <textarea class="frq-textarea" id="frq-answer" placeholder="Part (a): ...&#10;&#10;Part (b): ...&#10;&#10;Part (c): ..."></textarea>
+          <button class="btn btn-primary" style="margin-top:12px" onclick="submitFRQ()">Submit for AP-Style Grading</button>
+        </div>
+        <div class="feedback-box" id="feedback-box" style="display:none"></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" style="display:none">Next Question →</button>
+  </div>
+</div>
+
+<div class="screen top" id="screen-progress" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo">⚛️ AP Physics — AIS</div>
+    <div class="user-info"><button class="btn-sm" onclick="showScreen('screen-dashboard')">← Dashboard</button><button class="btn-sm" onclick="doLogout()">Sign Out</button></div>
+  </div>
+  <div style="width:100%;max-width:720px">
+    <div class="page-title">Your Progress</div>
+    <div class="page-sub" id="progress-sub">Lifetime performance</div>
+    <div class="stats-row" id="progress-stats"></div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px">
+      <div style="font-weight:700;margin-bottom:12px">Adaptive Level</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+        <div id="prog-level-pill" class="level-pill" style="border-color:var(--accent);color:var(--accent)">Beginner</div>
+        <div class="level-bar"><div class="level-fill" id="prog-level-fill" style="width:0%"></div></div>
+        <div id="prog-level-next" style="font-size:.78rem;color:var(--muted);min-width:110px;text-align:right"></div>
+      </div>
+      <div class="diff-bar-wrap" style="margin-bottom:0">
+        <span class="diff-label">Difficulty</span>
+        <div class="diff-track"><div class="diff-fill" id="prog-diff-fill" style="width:50%;background:#f59e0b"></div></div>
+        <span class="diff-value" id="prog-diff-text" style="color:var(--yellow)">Standard (5/10)</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="sendProgressEmail()">📧 Email Progress Report</button>
+    <div class="ok" id="email-ok"></div>
+    <div class="err" id="email-err"></div>
+  </div>
+</div>
+
+<div class="screen top" id="screen-admin" style="padding-top:0">
+  <div class="app-header" style="margin-top:16px">
+    <div class="logo" style="color:var(--gold)">👑 Admin Panel — Ayoub Al Hayik</div>
+    <div class="user-info"><button class="btn-sm" onclick="showScreen('screen-dashboard')">← Dashboard</button><button class="btn-sm" onclick="doLogout()">Sign Out</button></div>
+  </div>
+  <div class="admin-wrap">
+    <div class="admin-section">
+      <h3>Platform Overview</h3>
+      <div class="stats-row" id="admin-stats"></div>
+    </div>
+    <div class="admin-section">
+      <h3>Student Management</h3>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <input type="text" id="admin-search" placeholder="Search by name or email..." style="flex:1;min-width:180px;padding:8px 12px;font-size:.85rem" oninput="filterStudents()"/>
+        <select id="admin-course-filter" onchange="filterStudents()" style="width:auto;padding:8px 12px;font-size:.85rem">
+          <option value="">All Courses</option>
+          <option>AP Physics 1</option><option>AP Physics 2</option>
+          <option>AP Physics C: Mechanics</option><option>AP Physics C: E&M</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Course</th><th>Level</th><th>Pts</th><th>Accuracy</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="admin-students-tbody"><tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="admin-section">
+      <h3>Add Student</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input type="text" id="new-student-name" placeholder="Full name" style="flex:1;min-width:150px"/>
+        <input type="email" id="new-student-email" placeholder="student@student.aisuae.com" style="flex:1;min-width:200px"/>
+        <select id="new-student-course" style="width:auto">
+          <option value="">Course...</option>
+          <option>AP Physics 1</option><option>AP Physics 2</option>
+          <option>AP Physics C: Mechanics</option><option>AP Physics C: E&M</option>
+        </select>
+        <button class="btn btn-gold" style="width:auto;padding:8px 18px;margin-top:0" onclick="adminAddStudent()">Add</button>
+      </div>
+      <div class="ok" id="admin-add-ok"></div>
+      <div class="err" id="admin-add-err"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════ CREDENTIALS ══════════
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyBvhZeZ2kFUxXeM8MEP51mKnx7Q0aCGWxA",
+  authDomain:"ap-physics-ais.firebaseapp.com",
+  projectId:"ap-physics-ais",
+  storageBucket:"ap-physics-ais.firebasestorage.app",
+  messagingSenderId:"784260656157",
+  appId:"1:784260656157:web:9f899e32f5fb0b0fd01e40"
+};
+const EMAILJS_CONFIG={
+  publicKey:"e62R-pZ6X
