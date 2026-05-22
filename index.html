@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AP Physics AI — Final Upgrade</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<style>
+body{
+  margin:0;
+  background:#07101f;
+  color:#f1f5f9;
+  font-family:Segoe UI,sans-serif;
+}
+
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:30px;
+}
+
+.card{
+  background:#0f1d30;
+  border:1px solid #1e3050;
+  border-radius:14px;
+  padding:24px;
+  margin-bottom:24px;
+}
+
+button{
+  background:#3b82f6;
+  color:white;
+  border:none;
+  padding:12px 20px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+
+button:hover{
+  opacity:.9;
+}
+
+#questionBox{
+  margin-top:20px;
+  line-height:1.7;
+}
+
+.option{
+  padding:14px;
+  background:#162238;
+  border:1px solid #2d4a7a;
+  border-radius:10px;
+  margin-bottom:10px;
+  cursor:pointer;
+}
+
+.option:hover{
+  border-color:#60a5fa;
+}
+
+.correct{
+  border-color:#10b981 !important;
+  background:rgba(16,185,129,.1);
+}
+
+.wrong{
+  border-color:#ef4444 !important;
+  background:rgba(239,68,68,.1);
+}
+
+.visual{
+  background:#162238;
+  border-radius:12px;
+  padding:20px;
+  margin:20px 0;
+}
+
+select{
+  background:#162238;
+  color:white;
+  border:1px solid #2d4a7a;
+  padding:10px;
+  border-radius:10px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="card">
+    <h1>⚛️ AP Physics AI Generator</h1>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px">
+
+      <select id="course">
+        <option>AP Physics 1</option>
+        <option>AP Physics 2</option>
+        <option>AP Physics C: Mechanics</option>
+        <option>AP Physics C: E&M</option>
+      </select>
+
+      <select id="format">
+        <option>MCQ</option>
+        <option>FRQ</option>
+      </select>
+
+      <button onclick="generateQuestion()">
+        Generate AP Question
+      </button>
+
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="questionBox">
+      Click generate.
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+// =====================================================
+// GEMINI CONFIG
+// =====================================================
+
+const GEMINI_API_KEY = "YOUR_API_KEY_HERE";
+
+const GEMINI_URL =
+`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+// =====================================================
+// STATE
+// =====================================================
+
+let state={
+  usedQuestionHashes:[],
+  recentTopics:[],
+  currentQuestion:null
+};
+
+// =====================================================
+// HELPERS
+// =====================================================
+
+function hashQuestion(text){
+  return text
+    .toLowerCase()
+    .replace(/\s+/g,' ')
+    .replace(/[^a-z0-9 ]/g,'')
+    .slice(0,180);
+}
+
+function rememberQuestion(q){
+
+  const h=hashQuestion(
+    q.question || q.scenario || ''
+  );
+
+  if(!state.usedQuestionHashes.includes(h)){
+    state.usedQuestionHashes.push(h);
+  }
+
+  if(state.usedQuestionHashes.length>40){
+    state.usedQuestionHashes.shift();
+  }
+}
+
+function questionAlreadyUsed(q){
+
+  const h=hashQuestion(
+    q.question || q.scenario || ''
+  );
+
+  return state.usedQuestionHashes.includes(h);
+}
+
+function getCourseRules(course){
+
+  const rules={
+
+    "AP Physics 1":`
+- Algebra-based only
+- No calculus
+- Conceptual emphasis
+- AP Physics 1 rigor
+- Include misconceptions
+- Experimental interpretation preferred
+`,
+
+    "AP Physics 2":`
+- Algebra-based only
+- Thermodynamics
+- Fluids
+- Optics
+- Magnetism
+- Real-world applications
+`,
+
+    "AP Physics C: Mechanics":`
+- MUST use calculus naturally
+- Derivatives and integrals
+- Advanced mechanics reasoning
+- Symbolic derivations
+- AP C rigor
+`,
+
+    "AP Physics C: E&M":`
+- MUST use calculus naturally
+- Fields and flux
+- Gauss law
+- Induction
+- Maxwell concepts
+- AP C rigor
+`
+  };
+
+  return rules[course] || '';
+}
+
+// =====================================================
+// MAIN QUESTION GENERATOR
+// =====================================================
+
+async function generateQuestion(retry=0){
+
+  const course=document.getElementById('course').value;
+  const format=document.getElementById('format').value;
+
+  const qbox=document.getElementById('questionBox');
+
+  qbox.innerHTML=`Generating AP-level question...`;
+
+  const types=[
+    'Conceptual',
+    'Experimental',
+    'Graph Analysis',
+    'Lab-Based',
+    'Calculation',
+    'Data Analysis',
+    'Diagram-Based'
+  ];
+
+  const type=types[
+    Math.floor(Math.random()*types.length)
+  ];
+
+  const visuals=['svg','chartjs','table'];
+
+  const visualType=visuals[
+    Math.floor(Math.random()*visuals.length)
+  ];
+
+  const forbidden=state.usedQuestionHashes.join('\n');
+
+  const prompt=`
+You are an OFFICIAL College Board AP Physics writer.
+
+Generate ONE completely unique AP Physics question.
+
+COURSE: ${course}
+FORMAT: ${format}
+TYPE: ${type}
+VISUAL: ${visualType}
+
+${getCourseRules(course)}
+
+ANTI-REPETITION RULES:
+Do NOT repeat previous questions.
+
+Forbidden questions:
+${forbidden}
+
+VISUAL REQUIREMENTS:
+
+If svg:
+- detailed AP diagram
+- vectors
+- labels
+- axis labels
+- dark theme
+
+If chartjs:
+- realistic physics graph
+- proper units
+- AP-style trends
+
+If table:
+- realistic experimental data
+- units
+- uncertainty variation
+
+RETURN ONLY VALID JSON.
+
+MCQ FORMAT:
+{
+  "question":"...",
+  "options":["(A)...","(B)...","(C)...","(D)..."],
+  "answer":"A",
+  "explanation":"...",
+  "visual":{
+    "type":"${visualType}",
+    "caption":"...",
+    "svgContent":"...",
+    "tableHTML":"...",
+    "chartConfig":{}
+  }
+}
+
+FRQ FORMAT:
+{
+  "title":"...",
+  "scenario":"...",
+  "parts":[
+    {
+      "label":"(a)",
+      "text":"..."
+    }
+  ],
+  "rubric":"...",
+  "sampleAnswer":"...",
+  "visual":{
+    "type":"${visualType}",
+    "caption":"...",
+    "svgContent":"...",
+    "tableHTML":"...",
+    "chartConfig":{}
+  }
+}
+`;
+
+  try{
+
+    const res=await fetch(GEMINI_URL,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        contents:[{
+          parts:[{
+            text:prompt
+          }]
+        }],
+
+        generationConfig:{
+          temperature:1.35,
+          topP:0.95,
+          topK:64,
+          maxOutputTokens:3500
+        }
+      })
+    });
+
+    const data=await res.json();
+
+    let raw=data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    raw=raw
+      .replace(/```json/g,'')
+      .replace(/```/g,'')
+      .trim();
+
+    const start=raw.indexOf('{');
+    const end=raw.lastIndexOf('}');
+
+    const parsed=JSON.parse(
+      raw.slice(start,end+1)
+    );
+
+    if(questionAlreadyUsed(parsed)){
+
+      if(retry<3){
+        return generateQuestion(retry+1);
+      }
+    }
+
+    rememberQuestion(parsed);
+
+    state.currentQuestion=parsed;
+
+    renderQuestion(parsed,format);
+
+  }
+  catch(err){
+
+    console.error(err);
+
+    qbox.innerHTML=`
+      <div style="color:#ef4444">
+        Failed to generate question.
+      </div>
+    `;
+  }
+}
+
+// =====================================================
+// RENDER QUESTION
+// =====================================================
+
+function renderQuestion(q,format){
+
+  const qbox=document.getElementById('questionBox');
+
+  let html='';
+
+  if(format==='MCQ'){
+
+    html+=`<h2>${q.question}</h2>`;
+
+    if(q.visual){
+      html+=renderVisual(q.visual);
+    }
+
+    q.options.forEach(opt=>{
+
+      html+=`
+        <div class="option"
+          onclick="checkAnswer(this,'${opt.charAt(1)}','${q.answer}')">
+          ${opt}
+        </div>
+      `;
+    });
+
+    html+=`
+      <div id="explanation"
+      style="margin-top:20px"></div>
+    `;
+  }
+
+  else{
+
+    html+=`<h2>${q.title}</h2>`;
+
+    html+=`<p>${q.scenario}</p>`;
+
+    if(q.visual){
+      html+=renderVisual(q.visual);
+    }
+
+    q.parts.forEach(p=>{
+
+      html+=`
+        <div style="margin-bottom:18px">
+          <strong>${p.label}</strong>
+          ${p.text}
+        </div>
+      `;
+    });
+
+    html+=`
+      <hr style="margin:30px 0;border-color:#1e3050">
+      <h3>Rubric</h3>
+      <p>${q.rubric}</p>
+    `;
+  }
+
+  qbox.innerHTML=html;
+
+  if(q.visual?.type==='chartjs'){
+
+    setTimeout(()=>{
+
+      const canvas=document.createElement('canvas');
+      canvas.height=300;
+
+      const holder=document.getElementById('chartHolder');
+
+      holder.appendChild(canvas);
+
+      new Chart(canvas,q.visual.chartConfig);
+
+    },50);
+  }
+}
+
+// =====================================================
+// VISUAL RENDERING
+// =====================================================
+
+function renderVisual(v){
+
+  if(v.type==='svg'){
+
+    return `
+      <div class="visual">
+        ${v.svgContent}
+        <div style="margin-top:10px;color:#94a3b8">
+          ${v.caption}
+        </div>
+      </div>
+    `;
+  }
+
+  if(v.type==='table'){
+
+    return `
+      <div class="visual">
+        ${v.tableHTML}
+        <div style="margin-top:10px;color:#94a3b8">
+          ${v.caption}
+        </div>
+      </div>
+    `;
+  }
+
+  if(v.type==='chartjs'){
+
+    return `
+      <div class="visual">
+        <div id="chartHolder"></div>
+        <div style="margin-top:10px;color:#94a3b8">
+          ${v.caption}
+        </div>
+      </div>
+    `;
+  }
+
+  return '';
+}
+
+// =====================================================
+// ANSWER CHECKING
+// =====================================================
+
+function checkAnswer(el,selected,correct){
+
+  const all=document.querySelectorAll('.option');
+
+  all.forEach(x=>x.style.pointerEvents='none');
+
+  if(selected===correct){
+    el.classList.add('correct');
+  }
+  else{
+    el.classList.add('wrong');
+
+    all.forEach(o=>{
+      if(o.innerText.includes(`(${correct})`)){
+        o.classList.add('correct');
+      }
+    });
+  }
+}
+
+</script>
+</body>
+</html>
