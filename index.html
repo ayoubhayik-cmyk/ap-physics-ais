@@ -695,14 +695,67 @@ function pickScenario(){
 // ═══════════════════════════════════════════════════
 //  QUESTION GENERATION — GEMINI
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// FIND THIS EXACT LINE IN YOUR index.html:
+//   async function generateQuestion(){
+// DELETE everything from that line down to (and including):
+//   state.session.questionStartTime=Date.now();
+// }
+// THEN PASTE THIS ENTIRE BLOCK IN ITS PLACE
+// ═══════════════════════════════════════════════════
+
+const COGNITIVE_LEVELS=[
+  {tag:"Knowledge & Recall",desc:"recall a specific law, definition, or formula and apply it directly in one step"},
+  {tag:"Conceptual Understanding",desc:"explain why a physical phenomenon occurs, predict qualitative outcomes, or identify which principle applies"},
+  {tag:"Application",desc:"apply a law or formula to a specific numeric situation in 2 steps"},
+  {tag:"Analysis",desc:"interpret a graph, diagram, or data set to extract a physical quantity or relationship"},
+  {tag:"Synthesis & Evaluation",desc:"combine multiple concepts, evaluate competing claims, or design a procedure to test a hypothesis"}
+];
+
+const REAL_AP_EXAMPLES={
+  MCQ_GRAPH:`Example of a real AP MCQ graph question:
+"The graph above shows the velocity of an object as a function of time. Which of the following correctly describes the motion of the object between t = 2 s and t = 4 s?
+(A) The object moves with constant velocity.
+(B) The object decelerates and comes to rest.
+(C) The object accelerates in the negative direction.
+(D) The object has zero net force acting on it."`,
+
+  MCQ_DIAGRAM:`Example of a real AP MCQ diagram question:
+"The figure above shows two blocks connected by a light string over a frictionless pulley. Block A has mass 4.0 kg and rests on a frictionless horizontal surface. Block B has mass 2.0 kg and hangs vertically. What is the tension in the string?
+(A) 6.7 N  (B) 9.8 N  (C) 13.1 N  (D) 19.6 N"`,
+
+  MCQ_CONCEPTUAL:`Example of a real AP MCQ conceptual question:
+"A student claims that if the net force on an object is zero, the object must be at rest. Which of the following provides the best counterexample to this claim?
+(A) A book resting on a table
+(B) A car accelerating from a stoplight
+(C) A satellite moving in a circular orbit
+(D) A train moving at constant velocity on a straight track"`,
+
+  FRQ:`Example of a real AP FRQ structure:
+"A 2.0 kg block is released from rest at the top of a ramp that is 1.5 m above the ground. The ramp makes an angle of 30° with the horizontal, and the coefficient of kinetic friction between the block and the ramp is 0.20.
+(a) Draw a free-body diagram of the block while it is on the ramp. [3 points]
+(b) Calculate the acceleration of the block along the ramp. [3 points]
+(c) Determine the speed of the block at the bottom of the ramp. [3 points]
+(d) A student claims that if the angle of the ramp is increased while keeping the height constant, the block will reach a higher speed at the bottom. Is this claim correct? Justify your answer using physics principles. [3 points]"`
+};
+
+function selectVisualType(typeStr){
+  if(typeStr==='Graph Analysis')return'chartjs';
+  if(typeStr==='Data Analysis')return'table';
+  if(typeStr==='Lab-Based'||typeStr==='Experimental')return Math.random()<0.55?'table':'chartjs';
+  if(typeStr==='Diagram-Based')return'svg';
+  if(typeStr==='Calculation-Based')return Math.random()<0.5?'svg':'chartjs';
+  if(typeStr==='Conceptual Reasoning')return Math.random()<0.65?'svg':'none';
+  if(typeStr==='Theoretical')return Math.random()<0.5?'svg':'chartjs';
+  if(typeStr==='Multi-part Scenario')return'svg';
+  return Math.random()<0.4?'svg':Math.random()<0.5?'chartjs':'table';
+}
+
 async function generateQuestion(){
   state.answered=false;
   ['q-loading','q-content','next-btn','feedback-box','q-visual','frq-parts-display','frq-header-box'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
-    if(id==='q-loading')el.style.display='flex';
-    else if(id==='q-content'||id==='next-btn')el.style.display='none';
-    else if(id==='feedback-box'){el.style.display='none';}
-    else if(id==='q-visual'||id==='frq-parts-display'||id==='frq-header-box')el.style.display='none';
+    if(id==='q-loading')el.style.display='flex';else el.style.display='none';
   });
   document.getElementById('rush-alert').classList.remove('show');
 
@@ -712,124 +765,293 @@ async function generateQuestion(){
   const scenario=pickScenario();
   const unitData=UNITS[state.course]?.find(u=>u.num===state.unit.num);
   const unitTopics=unitData?.topics||'';
-  const tier=getDifficultyTier(d);
 
-  // Unique random values injected per question — forces Gemini to generate new content
+  // Cognitive level matched to difficulty
+  const cogIdx=d<=2?0:d<=4?1:d<=6?2:d<=8?3:4;
+  const cog=COGNITIVE_LEVELS[cogIdx];
+
+  // Physics-valid random values
   const rv={
-    m:+(Math.random()*15+1).toFixed(1),
-    m2:+(Math.random()*8+1).toFixed(1),
-    v:+(Math.random()*20+3).toFixed(1),
-    F:Math.round(Math.random()*80+10),
-    theta:[20,25,30,37,45,53,60][Math.floor(Math.random()*7)],
-    L:+(Math.random()*3+0.5).toFixed(2),
-    R:Math.round(Math.random()*90+10),
-    V:Math.round(Math.random()*18+3),
-    k:Math.round(Math.random()*300+50),
-    d:+(Math.random()*2+0.1).toFixed(2),
-    t:+(Math.random()*8+1).toFixed(1),
-    h:+(Math.random()*10+1).toFixed(1)
+    m:+(Math.random()*12+1).toFixed(1),
+    m2:+(Math.random()*7+1).toFixed(1),
+    v:+(Math.random()*15+2).toFixed(1),
+    F:Math.round(Math.random()*60+10),
+    theta:[25,30,37,45,53][Math.floor(Math.random()*5)],
+    L:+(Math.random()*2+0.5).toFixed(2),
+    R:Math.round(Math.random()*80+10),
+    V:Math.round(Math.random()*12+3),
+    k:Math.round(Math.random()*200+50),
+    d2:+(Math.random()*1.5+0.1).toFixed(2),
+    t:+(Math.random()*5+1).toFixed(1),
+    h:+(Math.random()*6+1).toFixed(1),
+    mu:+(Math.random()*0.3+0.1).toFixed(2),
+    T:Math.round(Math.random()*300+200)
   };
 
-  // Choose visual type intelligently
-  let vtype='svg';
-  if(['Graph Analysis','Data Analysis','Calculation-Based'].includes(typeStr))vtype='chartjs';
-  else if(typeStr==='Data Analysis')vtype='table';
-  else if(Math.random()<0.3)vtype='chartjs';
+  const vtype=selectVisualType(typeStr);
 
-  const svgRules=`SVG DRAWING RULES (strictly follow for dark-themed AP diagram):
-viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg"
-Background: <rect width="560" height="300" fill="#0f1d30"/>
-Physics objects: fill="#2d4a7a" stroke="#60a5fa" stroke-width="2"
-Applied/net force arrows: stroke="#10b981" stroke-width="2.5"
-Weight/gravity arrows: stroke="#ef4444" stroke-width="2.5"
-Normal force arrows: stroke="#f59e0b" stroke-width="2.5"
-Velocity vectors: stroke="#a78bfa" stroke-width="2.5"
-Electric field lines: stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="6,3"
-Graph axes/lines: stroke="#94a3b8" stroke-width="1.5"
-Graph data curve: stroke="#3b82f6" stroke-width="2.5" fill="none"
-Text: fill="#e2e8f0" font-family="Georgia,serif" font-size="13"
-Axis labels: fill="#94a3b8" font-size="12"
-ALWAYS define arrowhead markers in <defs>:
-<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
-Use separate marker IDs for different colors: id="ah_g" fill="#10b981", id="ah_r" fill="#ef4444", id="ah_y" fill="#f59e0b", id="ah_p" fill="#a78bfa"
-Include labeled values from the problem, tick marks, units on axes`;
+  // ── SVG SPECIFICATION ──────────────────────────────
+  const SVG_SPEC=`
+SVG DIAGRAM SPECIFICATION (produce a complete, professional College Board-style figure):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Canvas: viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg"
+FIRST CHILD: <rect width="560" height="300" fill="#0f1d30" rx="6"/>
 
-  const sharedInstructions=`COURSE: ${state.course}
-UNIT ${state.unit.num}: ${state.unit.name}
-KEY FORMULAS AND TOPICS: ${unitTopics}
-QUESTION TYPE: ${typeStr}
-DIFFICULTY: ${d}/10 — ${tier}
-${isCalc?'CALCULUS-BASED COURSE: use derivatives, integrals, and differential equations where appropriate':'ALGEBRA-BASED COURSE: no calculus'}
+COLOR SYSTEM (follow exactly):
+• Physics objects/bodies/blocks: fill="#2d4a7a" stroke="#60a5fa" stroke-width="2"
+• Applied force / net force: stroke="#10b981" stroke-width="2.5"
+• Weight / gravity: stroke="#ef4444" stroke-width="2.5"  
+• Normal force: stroke="#f59e0b" stroke-width="2.5"
+• Velocity vector: stroke="#a78bfa" stroke-width="2.5"
+• Tension: stroke="#22d3ee" stroke-width="2.5"
+• Electric field lines: stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="5,3"
+• Magnetic field (into page ⊗): fill="#94a3b8" — use × symbols
+• Magnetic field (out of page ⊙): fill="#94a3b8" — use · symbols
+• Graph axes: stroke="#475569" stroke-width="1.5"
+• Graph data line / curve: stroke="#3b82f6" stroke-width="2.5" fill="none"
+• Reference lines / dashed: stroke="#475569" stroke-width="1" stroke-dasharray="4,4"
+• Ground surface: stroke="#94a3b8" stroke-width="2" (with hatching below)
+• Text labels on objects: fill="#cbd5e1" font-family="Georgia,serif" font-size="13"
+• Axis labels with units: fill="#94a3b8" font-family="Georgia,serif" font-size="12"
+• Numerical values on diagram: fill="#fbbf24" font-size="11" (for quantities)
 
-MANDATORY SCENARIO: Build this question around — "${scenario}"
-MANDATORY UNIQUE VALUES (use these exact numbers in the question): m=${rv.m}kg, m₂=${rv.m2}kg, v=${rv.v}m/s, F=${rv.F}N, θ=${rv.theta}°, L=${rv.L}m, R=${rv.R}Ω, V=${rv.V}V, k=${rv.k}N/m, d=${rv.d}m, t=${rv.t}s, h=${rv.h}m
+ARROWHEADS: Always define in <defs> with separate IDs per color:
+<defs>
+  <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#10b981"/></marker>
+  <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ef4444"/></marker>
+  <marker id="ay" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f59e0b"/></marker>
+  <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#a78bfa"/></marker>
+  <marker id="ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#22d3ee"/></marker>
+  <marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3b82f6"/></marker>
+</defs>
 
-CRITICAL RULES:
-1. The question MUST be about Unit ${state.unit.num} (${state.unit.name}) ONLY
-2. Use the mandatory values above — this guarantees each question is numerically unique
-3. For ${state.course} — use appropriate physics and math for this course level
-4. Do NOT generate a generic inclined-plane question — use the scenario above`;
+REQUIRED ELEMENTS for physics diagrams:
+• Coordinate axes (x-y) in bottom-left or top-right corner
+• All forces labeled with symbol AND numerical value from problem
+• Angle arcs labeled with θ value
+• Ground hatching: short diagonal lines below the surface line
+• For graphs: labeled tick marks on both axes, grid lines (very faint), axis arrow ends
+
+TYPES OF DIAGRAMS TO DRAW (based on unit):
+Unit 1-2 (Mechanics): Free-body diagram, incline with block, pulley system, projectile path
+Unit 3 (Circular): Object on circular path with centripetal force labeled
+Unit 4 (Energy): Bar chart of energy OR ramp with height labeled  
+Unit 5 (Momentum): Before/after collision diagram
+Unit 6 (SHM): Spring-mass OR pendulum with labeled amplitude
+Unit 7 (Rotation): Disk/rod/pulley with torque arrows
+Unit 8-9 (E&M): Circuit diagram OR field line diagram
+Unit 10 (Waves): Sinusoidal wave with labeled λ and A
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+  // ── CHART SPECIFICATION ────────────────────────────
+  const CHART_SPEC=`
+CHART.JS SPECIFICATION (produce realistic AP-style physics graph):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Chart type: "line" for continuous data, "scatter" for experimental data points
+• Use physically correct data that follows the real equation for this unit topic
+• 6-8 data points with slight realistic scatter for experimental data
+• Dataset: borderColor:"#3b82f6", backgroundColor:"rgba(59,130,246,0.08)", pointRadius:5, pointBackgroundColor:"#3b82f6", tension:0 (straight lines) or 0.4 (curves)
+• For scatter with best-fit: add second dataset with tension:0.3, borderDash:[5,5], pointRadius:0
+• Axes MUST have title.display:true with quantity name AND unit in parentheses
+• ticks: color "#94a3b8", grid: color "rgba(148,163,184,0.08)"
+• legend labels: color "#94a3b8"
+• Example axis labels: "Time (s)", "Position (m)", "Force (N)", "Velocity (m/s)", "Current (A)", "Voltage (V)"
+• Data must be physically meaningful — e.g., for kinematics position-time: x = ½at² values
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+  // ── TABLE SPECIFICATION ────────────────────────────
+  const TABLE_SPEC=`
+HTML TABLE SPECIFICATION (produce AP lab-style data table):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• 5-7 data rows with physically realistic values
+• Column headers: quantity name with symbol and unit in parentheses, e.g., "Trial", "Mass m (kg)", "Period T (s)", "Force F (N)"
+• Include an uncertainty column where appropriate: "±0.01 s"
+• Data must follow a real physics relationship for the unit being tested
+• Style: 
+  - table: width:100%;border-collapse:collapse;font-size:.87rem;color:#e2e8f0
+  - thead tr: background:#1e3050
+  - th: padding:9px 14px;border:1px solid #2d4a7a;color:#60a5fa;font-weight:700;text-align:center
+  - tbody tr (alternating): background:#0f1d30 or #162238
+  - td: padding:8px 14px;border:1px solid #1e3050;text-align:center
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+  // ── MASTER QUALITY BRIEF ──────────────────────────
+  const QUALITY_BRIEF=`
+╔══════════════════════════════════════════════════════════╗
+║   AP PHYSICS PROFESSIONAL ASSESSMENT GENERATION BRIEF    ║
+╚══════════════════════════════════════════════════════════╝
+
+You are the lead AP Physics question writer for College Board. 
+You are producing questions for an adaptive assessment platform modeled on NWEA MAP Growth.
+Every question must be indistinguishable from an actual AP Physics exam question in language, structure, and rigor.
+
+━━ COURSE & UNIT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Course: ${state.course}
+Unit ${state.unit.num}: ${state.unit.name}
+Core Content: ${unitTopics}
+${isCalc?'Mode: CALCULUS-BASED — derivatives, integrals, and differential equations are required and expected':'Mode: ALGEBRA-BASED — use only algebra, ratios, and proportional reasoning; no calculus'}
+
+━━ ADAPTIVE PARAMETERS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Difficulty: ${d}/10
+Cognitive Level: ${cog.tag}
+Task: ${cog.desc}
+Question Type: ${typeStr}
+
+━━ UNIQUE QUESTION ANCHOR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Physical Situation: "${scenario}"
+Mandatory Values (embed these in the question — ensures no repetition):
+  mass = ${rv.m} kg | velocity = ${rv.v} m/s | force = ${rv.F} N
+  angle = ${rv.theta}° | length = ${rv.L} m | height = ${rv.h} m
+  resistance = ${rv.R} Ω | voltage = ${rv.V} V | spring k = ${rv.k} N/m
+  distance = ${rv.d2} m | time = ${rv.t} s | friction μ = ${rv.mu}
+  (Use only the values physically relevant to this unit)
+
+━━ LANGUAGE & TONE STANDARDS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Write in the exact voice of an AP Physics exam — formal, precise, concise
+✓ Use AP physics terminology: "net force," "electric potential difference," "impulse-momentum theorem," "conservation of mechanical energy," etc.
+✓ Every word must serve a purpose — no filler phrases
+✓ Stem must be unambiguous — exactly ONE correct answer must exist
+✓ Avoid: "Imagine that...", "Consider a situation where...", "Let's say..."
+✓ Use: "A [object] of mass [m] is [action]...", "The figure above shows...", "A student investigates..."
+
+━━ VISUAL REQUIREMENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Visual type for this question: ${vtype}
+${vtype==='svg'?SVG_SPEC:''}
+${vtype==='chartjs'?CHART_SPEC:''}
+${vtype==='table'?TABLE_SPEC:''}
+${vtype==='none'?'No visual — write a self-contained conceptual or theoretical question.':''}
+${vtype!=='none'?'CRITICAL: The question stem MUST explicitly reference the visual (e.g., "The figure above shows...", "According to the graph above...", "Using the data in the table above...")':''}
+
+━━ REFERENCE EXAMPLES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${state.format==='MCQ'?`${REAL_AP_EXAMPLES.MCQ_DIAGRAM}\n\n${REAL_AP_EXAMPLES.MCQ_CONCEPTUAL}`:REAL_AP_EXAMPLES.FRQ}
+
+Your question must match this quality and style.
+`;
 
   let prompt;
-  if(state.format==='FRQ'){
-    prompt=`You are a College Board AP Physics exam writer. Generate an ORIGINAL FRQ.
 
-${sharedInstructions}
+  if(state.format==='MCQ'){
+    prompt=`${QUALITY_BRIEF}
 
-VISUAL TYPE: ${vtype}
-${vtype==='svg'?svgRules:''}
-${vtype==='chartjs'?'Chart.js config: realistic physics data, borderColor:"#3b82f6", labeled axes with units in title':''}
-${vtype==='table'?'HTML table: dark styled, realistic experimental data with uncertainty values':''}
+━━ MCQ REQUIREMENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Question stem: 1-3 sentences, specific, references the visual if present
+• Exactly 4 options (A)(B)(C)(D) — all with correct units
+• Correct answer: physicaly accurate, requires ${cog.tag} thinking
+• Distractors: each must represent a SPECIFIC named student misconception:
+    - Wrong formula (e.g., using weight instead of normal force)
+    - Sign error or direction error  
+    - Missing a component (forgetting to resolve into components)
+    - Arithmetic error that students commonly make (factor of 2, forgetting to square)
+    - Conceptual confusion (confusing energy with momentum)
+• All options must be numerically plausible (no "obviously wrong" values)
+• Options in ascending or descending numerical order when possible
 
-AP FRQ FORMAT (official College Board structure):
-- Opening scenario paragraph referencing "${scenario}" with values from above
-- Given/known quantities listed
-- 4 sub-parts (a)(b)(c)(d) using AP command verbs: Calculate, Derive, Justify, Predict, Design, Describe, Sketch, Compare
-- Each part has a skill tag: [Mathematical Routines] [Argumentation] [Data Analysis] [Experimental Design] [Making Connections]
-- Point values (total 12 pts): typically 3+3+3+3
-- Parts build progressively in complexity
-- Part (d) should make connections to other physics concepts
+━━ DISTRACTOR QUALITY CHECK ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Before writing each distractor, ask: "What specific mistake would a student make to get this answer?" 
+Name that mistake in the explanation.
 
-Return ONLY valid JSON, no markdown fences:
-{"title":"concise descriptive title","scenario":"opening paragraph with ${rv.m}kg object in scenario of ${scenario}...","given":["m = ${rv.m} kg","v₀ = ${rv.v} m/s","F = ${rv.F} N","θ = ${rv.theta}°","g = 9.8 m/s²","additional given values..."],"parts":[{"label":"(a)","skill":"Mathematical Routines","points":3,"text":"AP command verb + specific calculation task..."},{"label":"(b)","skill":"Argumentation","points":3,"text":"Justify or explain..."},{"label":"(c)","skill":"Data Analysis","points":3,"text":"Using the figure above, determine..."},{"label":"(d)","skill":"Making Connections","points":3,"text":"Predict what would happen if..."}],"totalPoints":12,"rubric":"(a) 3pts: correct setup 1pt + correct substitution 1pt + correct answer with units 1pt\\n(b) 3pts: ...","sampleAnswer":"(a) Full solution with algebra...\\n(b) Justification...\\n(c) From graph...\\n(d) Prediction...","visual":{"type":"${vtype}","caption":"Figure 1: diagram of ${scenario}","svgContent":"${vtype==='svg'?'<svg viewBox=\\"0 0 560 300\\" xmlns=\\"http://www.w3.org/2000/svg\\"><rect width=\\"560\\" height=\\"300\\" fill=\\"#0f1d30\\"/><!-- complete detailed physics diagram here --></svg>':''}","tableHTML":"${vtype==='table'?'<table style=\\"width:100%;border-collapse:collapse;color:#e2e8f0\\"><thead><tr style=\\"background:#1e3050\\"><th style=\\"padding:8px 12px;border:1px solid #2d4a7a\\">Trial</th><th style=\\"padding:8px 12px;border:1px solid #2d4a7a\\">Variable (unit)</th></tr></thead><tbody><tr><td style=\\"padding:7px 12px;border:1px solid #1e3050;text-align:center\\">1</td><td style=\\"padding:7px 12px;border:1px solid #1e3050;text-align:center\\">value</td></tr></tbody></table>':''}","chartConfig":${vtype==='chartjs'?'{"type":"scatter","data":{"datasets":[{"label":"Measured Data","data":[{"x":1,"y":2},{"x":2,"y":4},{"x":3,"y":6},{"x":4,"y":8},{"x":5,"y":10}],"borderColor":"#3b82f6","backgroundColor":"rgba(59,130,246,0.15)","pointRadius":6,"showLine":true}]},"options":{"scales":{"x":{"title":{"display":true,"text":"x-variable (unit)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.1)"}},"y":{"title":{"display":true,"text":"y-variable (unit)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.1)"}}},"plugins":{"legend":{"labels":{"color":"#94a3b8"}}}}}':'null'}}}`;
+Return ONLY valid JSON — no markdown, no code fences, no text before or after:
+{
+  "question": "AP-quality stem referencing the visual [if visual]. Must be a complete, clear, specific question.",
+  "options": [
+    "(A) [value with unit]",
+    "(B) [value with unit]",
+    "(C) [CORRECT value with unit]",
+    "(D) [value with unit]"
+  ],
+  "answer": "C",
+  "explanation": "CORRECT: [State the relevant law/principle]. [Write the equation]. Substituting: [show the substitution]. Result = [value with unit]. || (A) results from [specific named mistake]. (B) results from [specific named mistake]. (D) results from [specific named mistake].",
+  "visual": {
+    "type": "${vtype}",
+    "caption": "Figure 1: [descriptive AP-style caption for ${scenario}]",
+    "svgContent": "${vtype==='svg'?'<svg viewBox=\\"0 0 560 300\\" xmlns=\\"http://www.w3.org/2000/svg\\"><rect width=\\"560\\" height=\\"300\\" fill=\\"#0f1d30\\" rx=\\"6\\"/><defs><marker id=\\"ag\\" viewBox=\\"0 0 10 10\\" refX=\\"9\\" refY=\\"5\\" markerWidth=\\"6\\" markerHeight=\\"6\\" orient=\\"auto\\"><path d=\\"M0 0L10 5L0 10z\\" fill=\\"#10b981\\"/></marker><marker id=\\"ar\\" viewBox=\\"0 0 10 10\\" refX=\\"9\\" refY=\\"5\\" markerWidth=\\"6\\" markerHeight=\\"6\\" orient=\\"auto\\"><path d=\\"M0 0L10 5L0 10z\\" fill=\\"#ef4444\\"/></marker><marker id=\\"ay\\" viewBox=\\"0 0 10 10\\" refX=\\"9\\" refY=\\"5\\" markerWidth=\\"6\\" markerHeight=\\"6\\" orient=\\"auto\\"><path d=\\"M0 0L10 5L0 10z\\" fill=\\"#f59e0b\\"/></marker></defs><!-- COMPLETE PROFESSIONAL AP DIAGRAM for ${scenario} with all forces labeled with values, coordinate system, ground hatching --></svg>':''}",
+    "tableHTML": "${vtype==='table'?'<table style=\\"width:100%;border-collapse:collapse;font-size:.87rem\\"><thead><tr style=\\"background:#1e3050\\"><th style=\\"padding:9px 14px;border:1px solid #2d4a7a;color:#60a5fa;font-weight:700;text-align:center\\">Trial</th><th style=\\"padding:9px 14px;border:1px solid #2d4a7a;color:#60a5fa;font-weight:700;text-align:center\\">Quantity (unit)</th></tr></thead><tbody><tr style=\\"background:#0f1d30\\"><td style=\\"padding:8px 14px;border:1px solid #1e3050;text-align:center\\">1</td><td style=\\"padding:8px 14px;border:1px solid #1e3050;text-align:center\\">value</td></tr></tbody></table>':''}",
+    "chartConfig": ${vtype==='chartjs'?'{"type":"line","data":{"labels":[0,1,2,3,4,5,6],"datasets":[{"label":"Position x (m)","data":[0,0.5,2.0,4.5,8.0,12.5,18.0],"borderColor":"#3b82f6","backgroundColor":"rgba(59,130,246,0.08)","pointRadius":5,"pointBackgroundColor":"#3b82f6","tension":0,"fill":false}]},"options":{"scales":{"x":{"title":{"display":true,"text":"Time t (s)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.08)"}},"y":{"title":{"display":true,"text":"Position x (m)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.08)"}}},"plugins":{"legend":{"labels":{"color":"#94a3b8"}}}}}':'null'}
+  }
+}`;
+
   }else{
-    prompt=`You are a College Board AP Physics exam writer. Generate an ORIGINAL MCQ.
+    // FRQ
+    prompt=`${QUALITY_BRIEF}
 
-${sharedInstructions}
+━━ FRQ REQUIREMENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Official College Board AP FRQ structure — follow exactly:
 
-VISUAL TYPE: ${vtype}
-${vtype==='svg'?svgRules:''}
-${vtype==='chartjs'?'Chart.js config: realistic physics data for the question scenario, properly labeled':''}
-${vtype==='table'?'HTML table: dark styled experimental data that the question refers to':''}
+OPENING: 2-3 sentences establishing the physical situation for "${scenario}"
+with values from the mandatory list above. Professional, specific, no filler.
 
-AP MCQ FORMAT:
-- Question stem MUST start with reference to the visual: "The figure above shows..." or "According to the graph..." or "The data in the table..."
-- 4 answer choices (A)(B)(C)(D) with units where applicable
-- Distractors based on real student misconceptions (e.g., wrong formula, sign error, ignoring a force)
-- Higher difficulty = requires 2-3 step reasoning
+GIVEN VALUES: List all provided quantities with symbol, value, and unit.
+Always include g = 9.8 m/s² for mechanics questions.
 
-Return ONLY valid JSON, no markdown fences:
-{"question":"The figure above shows ${scenario} with m=${rv.m}kg... Which of the following best describes...","options":["(A) numerical answer with units","(B) numerical answer with units","(C) numerical answer with units","(D) numerical answer with units"],"answer":"C","explanation":"Step 1: identify relevant equation for ${state.unit.name}... Step 2: substitute values m=${rv.m}kg, v=${rv.v}m/s... Step 3: calculate result... Therefore (C) is correct. (A) is wrong because... (B) is wrong because... (D) is wrong because...","visual":{"type":"${vtype}","caption":"Figure 1: ${scenario}","svgContent":"${vtype==='svg'?'<svg viewBox=\\"0 0 560 300\\" xmlns=\\"http://www.w3.org/2000/svg\\"><rect width=\\"560\\" height=\\"300\\" fill=\\"#0f1d30\\"/><!-- COMPLETE detailed AP-style physics diagram for ${scenario} with labeled values --></svg>':''}","tableHTML":"${vtype==='table'?'<table style=\\"width:100%;border-collapse:collapse;color:#e2e8f0\\"><thead>...</thead><tbody>...</tbody></table>':''}","chartConfig":${vtype==='chartjs'?'{"type":"line","data":{"labels":[0,1,2,3,4,5],"datasets":[{"label":"label (unit)","data":[0,4,8,12,16,20],"borderColor":"#3b82f6","backgroundColor":"rgba(59,130,246,0.08)","pointRadius":5,"tension":0}]},"options":{"scales":{"x":{"title":{"display":true,"text":"Time (s)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.1)"}},"y":{"title":{"display":true,"text":"Quantity (unit)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.1)"}}},"plugins":{"legend":{"labels":{"color":"#94a3b8"}}}}}':'null'}}}`;
+SUB-PARTS: Exactly 4 parts (a)(b)(c)(d) — each worth 3 points = 12 total
+Progressive structure:
+  (a) [Mathematical Routines] — Direct calculation or derivation — "Calculate...", "Derive an expression for...", "Determine..."
+  (b) [Argumentation] — Physical justification — "Justify your answer using...", "Explain why...", "A student claims... Is this correct? Justify."
+  (c) [Data Analysis] — Interpret the visual above — "Using the [graph/figure/table] above, determine...", "The data in the table above shows... What does the slope represent?"
+  (d) [Making Connections] — Synthesis or design — "Predict...", "How would [outcome] change if [variable]...? Justify.", "Design an experiment to..."
+
+AP COMMAND VERBS to use: Calculate, Derive, Justify, Determine, Describe, Sketch and label, Predict, Design, Explain, Compare, Identify
+
+RUBRIC: Detailed per-part, e.g.:
+"(a) 3 points: 1 point for correct equation or setup, 1 point for correct substitution with units, 1 point for correct final answer with units."
+
+Return ONLY valid JSON — no markdown, no code fences:
+{
+  "title": "4-6 word AP-style title (e.g., 'Projectile Motion Analysis', 'RC Circuit Charging')",
+  "scenario": "Professional 2-3 sentence setup for ${scenario} using values ${rv.m} kg, ${rv.v} m/s, ${rv.F} N, θ=${rv.theta}°. Include the figure reference if visual is present.",
+  "given": [
+    "m = ${rv.m} kg",
+    "v₀ = ${rv.v} m/s",
+    "F = ${rv.F} N",
+    "θ = ${rv.theta}°",
+    "g = 9.8 m/s²"
+  ],
+  "parts": [
+    {"label":"(a)","skill":"Mathematical Routines","points":3,"text":"Calculate [specific quantity]. Show all work and include units in your answer."},
+    {"label":"(b)","skill":"Argumentation","points":3,"text":"A student claims [specific claim]. Is this correct? Justify your answer using relevant physics principles."},
+    {"label":"(c)","skill":"Data Analysis","points":3,"text":"Using the [figure/graph/table] above, determine [specific quantity or relationship]. Explain how the [visual feature] supports your answer."},
+    {"label":"(d)","skill":"Making Connections","points":3,"text":"Predict how [outcome] would change if [condition is modified]. Justify your prediction using a physics principle from ${state.unit.name}."}
+  ],
+  "totalPoints": 12,
+  "rubric": "(a) 3 points: 1 pt correct equation, 1 pt correct substitution, 1 pt correct answer with units.\\n(b) 3 points: 1 pt correct claim assessment, 2 pts complete physical justification referencing quantities.\\n(c) 3 points: 1 pt correctly reading the visual, 1 pt correct calculation or identification, 1 pt explanation.\\n(d) 3 points: 1 pt correct directional prediction (increase/decrease/unchanged), 2 pts complete causal physics reasoning.",
+  "sampleAnswer": "(a) [complete worked solution]\\n(b) [complete justification]\\n(c) [graph/data analysis with explanation]\\n(d) [prediction with full reasoning]",
+  "visual": {
+    "type": "${vtype==='none'?'svg':vtype}",
+    "caption": "Figure 1: [descriptive AP-style caption for ${scenario}]",
+    "svgContent": "<svg viewBox=\\"0 0 560 300\\" xmlns=\\"http://www.w3.org/2000/svg\\"><rect width=\\"560\\" height=\\"300\\" fill=\\"#0f1d30\\" rx=\\"6\\"/><defs><marker id=\\"ag\\" viewBox=\\"0 0 10 10\\" refX=\\"9\\" refY=\\"5\\" markerWidth=\\"6\\" markerHeight=\\"6\\" orient=\\"auto\\"><path d=\\"M0 0L10 5L0 10z\\" fill=\\"#10b981\\"/></marker><marker id=\\"ar\\" viewBox=\\"0 0 10 10\\" refX=\\"9\\" refY=\\"5\\" markerWidth=\\"6\\" markerHeight=\\"6\\" orient=\\"auto\\"><path d=\\"M0 0L10 5L0 10z\\" fill=\\"#ef4444\\"/></marker><marker id=\\"ay\\" viewBox=\\"0 0 10 10\\" refX=\\"9\\" refY=\\"5\\" markerWidth=\\"6\\" markerHeight=\\"6\\" orient=\\"auto\\"><path d=\\"M0 0L10 5L0 10z\\" fill=\\"#f59e0b\\"/></marker></defs><!-- COMPLETE PROFESSIONAL FRQ DIAGRAM --></svg>",
+    "tableHTML": "${vtype==='table'?'<table style=\\"width:100%;border-collapse:collapse;font-size:.87rem\\"><thead><tr style=\\"background:#1e3050\\"><th style=\\"padding:9px 14px;border:1px solid #2d4a7a;color:#60a5fa;font-weight:700;text-align:center\\">Trial</th><th style=\\"padding:9px 14px;border:1px solid #2d4a7a;color:#60a5fa;font-weight:700;text-align:center\\">Variable (unit)</th></tr></thead><tbody></tbody></table>':''}",
+    "chartConfig": ${vtype==='chartjs'?'{"type":"scatter","data":{"datasets":[{"label":"Experimental Data","data":[{"x":0.5,"y":1.2},{"x":1.0,"y":2.5},{"x":1.5,"y":3.6},{"x":2.0,"y":5.1},{"x":2.5,"y":6.2},{"x":3.0,"y":7.5}],"borderColor":"#3b82f6","backgroundColor":"rgba(59,130,246,0.2)","pointRadius":6,"pointBackgroundColor":"#3b82f6","showLine":false}]},"options":{"scales":{"x":{"title":{"display":true,"text":"x-variable (unit)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.08)"}},"y":{"title":{"display":true,"text":"y-variable (unit)","color":"#94a3b8"},"ticks":{"color":"#94a3b8"},"grid":{"color":"rgba(148,163,184,0.08)"}}},"plugins":{"legend":{"labels":{"color":"#94a3b8"}}}}}':'null'}
+  }
+}`;
   }
 
   const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}&t=${Date.now()}`;
   try{
-    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:1.0,topK:64,topP:0.99,maxOutputTokens:3500}})
+    const res=await fetch(url,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{temperature:0.85,topK:40,topP:0.95,maxOutputTokens:4000}
+      })
     });
     const data=await res.json();
     if(data.error)throw new Error(data.error.message);
     let raw=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
-    raw=raw.replace(/```json/g,'').replace(/```/g,'').trim();
+    // Clean any markdown wrappers
+    raw=raw.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
     const js=raw.indexOf('{');const je=raw.lastIndexOf('}');
     if(js===-1)throw new Error('No JSON in response');
     state.currentQ=JSON.parse(raw.slice(js,je+1));
-    state.currentQ.type=typeStr;state.currentQ.format=state.format;
+    state.currentQ.type=typeStr;
+    state.currentQ.format=state.format;
     state.currentQ.scenario=scenario;
+    // Strip any injected misconception labels from option text
+    if(state.currentQ.options){
+      state.currentQ.options=state.currentQ.options.map(o=>o.replace(/\s*[—–-]+\s*(misconception|distractor|wrong because)[^)"]*/gi,'').trim());
+    }
     renderQuestion(state.currentQ);
   }catch(e){
-    console.error('Gemini error:',e.message);
-    // COURSE-SPECIFIC FALLBACK — never shows inclined plane for wrong course
+    console.error('Generation error:',e.message);
     const fallback=buildFallback(state.course,state.unit.num,typeStr,scenario,rv);
     state.currentQ=fallback;
     renderQuestion(state.currentQ);
