@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AP Physics 1 Mastery</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f4f7fb;
+      color: #111827;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      padding: 50px;
+      border-radius: 24px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      max-width: 700px;
+      margin: auto;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    .btn {
+      margin-top: 20px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+    }
+
+    .section-title {
+      font-size: 32px;
+      margin: 40px 0 20px;
+    }
+
+    .units-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .unit-card {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      transition: 0.3s;
+    }
+
+    .unit-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .unit-number {
+      font-size: 14px;
+      color: #2563eb;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .unit-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .unit-topics {
+      line-height: 1.6;
+      color: #374151;
+      margin-bottom: 18px;
+    }
+
+    .practice-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #111827;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .practice-btn:hover {
+      background: #1f2937;
+    }
+
+    .focus-box {
+      margin-top: 40px;
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      color: #6b7280;
+    }
+
+    #graphContainer {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .option-btn {
+      display:block;
+      width:100%;
+      margin-bottom:12px;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      background:#e5e7eb;
+      cursor:pointer;
+      font-size:16px;
+    }
+
+    .option-btn:hover {
+      background: #d1d5db;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <section class="hero">
+
+    <h1>AP Physics 1 Mastery</h1>
+
+    <p>
+      Adaptive AP Physics 1 practice with College Board–style questions,
+      graph analysis, diagrams, and conceptual reasoning.
+    </p>
+
+    <div style="margin-top:30px;max-width:500px;margin-inline:auto;">
+
+      <input
+        type="email"
+        id="email"
+        placeholder="Enter your email"
+        style="width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:12px;"
+      />
+
+      <input
+        type="password"
+        id="password"
+        placeholder="Enter your password"
+        style="width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:12px;"
+      />
+
+      <button class="btn" onclick="login()">
+        Login / Create Account
+      </button>
+
+    </div>
+
+  </section>
+
+  <div id="dashboard" style="display:none;">
+
+    <h2 class="section-title">AP Physics 1 Units</h2>
+
+    <div class="units-grid" id="unitsGrid"></div>
+
+    <div class="focus-box" id="questionBox" style="display:none;">
+
+      <h2 id="questionTitle"></h2>
+
+      <p id="questionText" style="margin-top:15px;font-size:18px;line-height:1.6;"></p>
+
+      <div id="graphContainer"></div>
+
+      <div id="optionsBox" style="margin-top:25px;"></div>
+
+      <div id="feedback" style="margin-top:20px;font-weight:bold;font-size:18px;"></div>
+
+      <button class="btn" onclick="nextQuestion()">
+        Next Question
+      </button>
+
+    </div>
+
+  </div>
+
+  <footer>
+    AP Physics 1 Mastery © 2026
+  </footer>
+
+</div>
+
+<script>
+
+const adminEmail = "ayooobalhayik1999@gmail.com";
+
+const UNITS = [
+
+  {
+    num: 1,
+    name: "Kinematics",
+    topics: "Motion, displacement, velocity, acceleration, projectile motion"
+  },
+
+  {
+    num: 2,
+    name: "Force and Translational Dynamics",
+    topics: "Newton's laws, free-body diagrams, friction"
+  },
+
+  {
+    num: 3,
+    name: "Work, Energy, and Power",
+    topics: "Conservation of energy, work-energy theorem"
+  }
+
+];
+
+const kinematicsQuestions = [
+
+  {
+    title: "Velocity-Time Graph",
+
+    text: "During which interval is the object accelerating positively?",
+
+    type: "graph",
+
+    options: [
+      "Interval 1",
+      "Interval 2",
+      "Interval 3",
+      "Interval 4"
+    ],
+
+    answer: 1
+  },
+
+  {
+    title: "Projectile Motion",
+
+    text: "A ball is launched horizontally from a cliff. Which quantity remains constant during the motion if air resistance is neglected?",
+
+    type: "conceptual",
+
+    options: [
+      "Vertical velocity",
+      "Horizontal velocity",
+      "Vertical acceleration",
+      "Range"
+    ],
+
+    answer: 1
+  },
+
+  {
+    title: "Motion Graph Interpretation",
+
+    text: "What does the slope of a velocity-time graph represent?",
+
+    type: "graph",
+
+    options: [
+      "Displacement",
+      "Speed",
+      "Acceleration",
+      "Force"
+    ],
+
+    answer: 2
+  }
+
+];
+
+let currentQuestion = 0;
+
+const unitsGrid = document.getElementById("unitsGrid");
+
+UNITS.forEach(unit => {
+
+  unitsGrid.innerHTML += `
+
+    <div class="unit-card">
+
+      <div class="unit-number">
+        UNIT ${unit.num}
+      </div>
+
+      <div class="unit-title">
+        ${unit.name}
+      </div>
+
+      <div class="unit-topics">
+        ${unit.topics}
+      </div>
+
+      <button
+        class="practice-btn"
+        onclick="practiceUnit(${unit.num})"
+      >
+        Practice Unit ${unit.num}
+      </button>
+
+    </div>
+
+  `;
+
+});
+
+function login() {
+
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  if(email === "" || password === "") {
+    alert("Please enter email and password");
+    return;
+  }
+
+  if(email === adminEmail) {
+    alert("Welcome Admin Ayoub");
+  } else {
+    alert("Student account loaded successfully");
+  }
+
+  document.getElementById("dashboard").style.display = "block";
+
+  window.scrollTo({
+    top: 700,
+    behavior: 'smooth'
+  });
+
+}
+
+function practiceUnit(unitNumber) {
+
+  if(unitNumber === 1) {
+
+    currentQuestion = 0;
+
+    loadQuestion();
+
+  } else {
+
+    alert("This unit is coming soon.");
+
+  }
+
+}
+
+function generateVelocityTimeGraph() {
+
+  const graph = `
+
+  <svg width="500" height="300" viewBox="0 0 500 300">
+
+    <rect width="500" height="300" fill="white"/>
+
+    <line x1="60" y1="250" x2="450" y2="250"
+      stroke="black" stroke-width="3"/>
+
+    <line x1="60" y1="250" x2="60" y2="40"
+      stroke="black" stroke-width="3"/>
+
+    <text x="455" y="255" font-size="16">t</text>
+
+    <text x="45" y="45" font-size="16">v</text>
+
+    <polyline
+      points="60,220 140,220 220,150 320,150 420,80"
+      fill="none"
+      stroke="#2563eb"
+      stroke-width="5"
+    />
+
+    <text x="90" y="270" font-size="14">(1)</text>
+    <text x="180" y="270" font-size="14">(2)</text>
+    <text x="280" y="270" font-size="14">(3)</text>
+    <text x="380" y="270" font-size="14">(4)</text>
+
+  </svg>
+
+  `;
+
+  document.getElementById("graphContainer").innerHTML = graph;
+
+}
+
+function loadQuestion() {
+
+  const q = kinematicsQuestions[currentQuestion];
+
+  document.getElementById("questionBox").style.display = "block";
+
+  document.getElementById("questionTitle").innerText = q.title;
+
+  document.getElementById("questionText").innerText = q.text;
+
+  const graphContainer = document.getElementById("graphContainer");
+
+  graphContainer.innerHTML = "";
+
+  if(q.type === "graph") {
+    generateVelocityTimeGraph();
+  }
+
+  const optionsBox = document.getElementById("optionsBox");
+
+  optionsBox.innerHTML = "";
+
+  q.options.forEach((option, index) => {
+
+    optionsBox.innerHTML += `
+
+      <button
+        class="option-btn"
+        onclick="checkAnswer(${index})"
+      >
+        ${option}
+      </button>
+
+    `;
+
+  });
+
+  document.getElementById("feedback").innerHTML = "";
+
+}
+
+function checkAnswer(selected) {
+
+  const q = kinematicsQuestions[currentQuestion];
+
+  if(selected === q.answer) {
+
+    document.getElementById("feedback").innerHTML =
+      "✅ Correct Answer";
+
+  } else {
+
+    document.getElementById("feedback").innerHTML =
+      "❌ Incorrect Answer";
+
+  }
+
+}
+
+function nextQuestion() {
+
+  currentQuestion++;
+
+  if(currentQuestion >= kinematicsQuestions.length) {
+    currentQuestion = 0;
+  }
+
+  loadQuestion();
+
+}
+
+</script>
+
+</body>
+</html>
