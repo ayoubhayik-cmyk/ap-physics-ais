@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AP Physics 1 Mastery</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f4f7fb;
+      color: #111827;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      padding: 50px;
+      border-radius: 24px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      max-width: 700px;
+      margin: auto;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    .btn {
+      margin-top: 25px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+    }
+
+    .section-title {
+      font-size: 32px;
+      margin: 40px 0 20px;
+    }
+
+    .units-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .unit-card {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      transition: 0.3s;
+    }
+
+    .unit-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .unit-number {
+      font-size: 14px;
+      color: #2563eb;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .unit-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .unit-topics {
+      line-height: 1.6;
+      color: #374151;
+      margin-bottom: 18px;
+    }
+
+    .practice-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #111827;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .practice-btn:hover {
+      background: #1f2937;
+    }
+
+    .focus-box {
+      margin-top: 40px;
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    .focus-box h2 {
+      margin-bottom: 20px;
+    }
+
+    .focus-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .focus-item {
+      background: #eff6ff;
+      border-left: 5px solid #2563eb;
+      padding: 15px;
+      border-radius: 12px;
+    }
+
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- LOGIN SECTION -->
+    <section class="hero">
+      <h1>AP Physics 1 Mastery</h1>
+
+      <p>
+        Adaptive AP Physics 1 practice with College Board–style questions,
+        conceptual reasoning, graph analysis, and intelligent feedback.
+      </p>
+
+      <div style="margin-top:30px;max-width:500px;margin-inline:auto;">
+
+        <input
+          type="email"
+          id="email"
+          placeholder="Enter your email"
+          style="width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:12px;"
+        />
+
+        <input
+          type="password"
+          id="password"
+          placeholder="Enter your password"
+          style="width:100%;padding:14px;border-radius:12px;border:none;margin-bottom:12px;"
+        />
+
+        <button class="btn" onclick="login()">
+          Login / Create Account
+        </button>
+
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" style="display:none;">
+
+      <h2 class="section-title">AP Physics 1 Units</h2>
+
+      <div class="units-grid" id="unitsGrid"></div>
+
+      <div class="focus-box">
+        <h2>Current Development Focus — Unit 1 Kinematics</h2>
+
+        <p>
+          This platform is currently optimized for AP Physics 1 Unit 1.
+          Practice conceptual reasoning, graph analysis, projectile motion,
+          and AP-style multiple choice questions.
+        </p>
+      </div>
+
+      <!-- QUESTION AREA -->
+      <div class="focus-box" id="questionBox" style="display:none;">
+        <h2 id="questionTitle">Question</h2>
+
+        <p id="questionText" style="font-size:18px;margin-top:15px;line-height:1.6;"></p>
+
+        <div id="optionsBox" style="margin-top:25px;"></div>
+
+        <div id="feedback" style="margin-top:20px;font-weight:bold;"></div>
+
+        <button class="btn" onclick="nextQuestion()">
+          Next Question
+        </button>
+      </div>
+
+    </div>
+
+    <footer>
+      AP Physics 1 Mastery © 2026
+    </footer>
+
+  </div>
+
+  <script>
+
+    const adminEmail = "ayooobalhayik1999@gmail.com";
+
+    const UNITS = [
+      {
+        num: 1,
+        name: "Kinematics",
+        topics: "Motion, displacement, velocity, acceleration, projectile motion, vectors"
+      },
+      {
+        num: 2,
+        name: "Force and Translational Dynamics",
+        topics: "Newton's laws, friction, tension, equilibrium"
+      },
+      {
+        num: 3,
+        name: "Work, Energy, and Power",
+        topics: "Conservation of energy, work-energy theorem, power"
+      },
+      {
+        num: 4,
+        name: "Linear Momentum",
+        topics: "Momentum, impulse, collisions"
+      },
+      {
+        num: 5,
+        name: "Torque and Rotational Dynamics",
+        topics: "Torque, rotational inertia, angular acceleration"
+      },
+      {
+        num: 6,
+        name: "Energy and Momentum of Rotating Systems",
+        topics: "Rolling motion, angular momentum"
+      },
+      {
+        num: 7,
+        name: "Oscillations",
+        topics: "Simple harmonic motion, springs, pendulums"
+      },
+      {
+        num: 8,
+        name: "Fluids",
+        topics: "Pressure, buoyancy, continuity equation"
+      }
+    ];
+
+    const kinematicsQuestions = [
+      {
+        title: "Projectile Motion",
+        text: "A ball is launched horizontally from a cliff. Which quantity remains constant during the motion if air resistance is neglected?",
+        options: [
+          "Vertical velocity",
+          "Horizontal velocity",
+          "Vertical acceleration",
+          "Range"
+        ],
+        answer: 1
+      },
+      {
+        title: "Motion Graphs",
+        text: "What does the slope of a velocity-time graph represent?",
+        options: [
+          "Displacement",
+          "Speed",
+          "Acceleration",
+          "Force"
+        ],
+        answer: 2
+      },
+      {
+        title: "Acceleration",
+        text: "An object moving to the right slows down. What is the direction of acceleration?",
+        options: [
+          "To the right",
+          "To the left",
+          "Upward",
+          "Zero"
+        ],
+        answer: 1
+      }
+    ];
+
+    let currentQuestion = 0;
+
+    const unitsGrid = document.getElementById("unitsGrid");
+
+    UNITS.forEach(unit => {
+      unitsGrid.innerHTML += `
+        <div class="unit-card">
+          <div class="unit-number">UNIT ${unit.num}</div>
+
+          <div class="unit-title">${unit.name}</div>
+
+          <div class="unit-topics">
+            ${unit.topics}
+          </div>
+
+          <button class="practice-btn" onclick="practiceUnit(${unit.num})">
+            Practice Unit ${unit.num}
+          </button>
+        </div>
+      `;
+    });
+
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      if(email === "" || password === "") {
+        alert("Please enter email and password");
+        return;
+      }
+
+      if(email === adminEmail) {
+        alert("Welcome Admin Ayoub");
+      } else {
+        alert("Student account loaded successfully");
+      }
+
+      document.getElementById("dashboard").style.display = "block";
+      window.scrollTo({ top: 700, behavior: 'smooth' });
+    }
+
+    function practiceUnit(unitNumber) {
+      if(unitNumber === 1) {
+        currentQuestion = 0;
+        loadQuestion();
+      } else {
+        alert("This unit will be added soon.");
+      }
+    }
+
+    function loadQuestion() {
+      const q = kinematicsQuestions[currentQuestion];
+
+      document.getElementById("questionBox").style.display = "block";
+      document.getElementById("questionTitle").innerText = q.title;
+      document.getElementById("questionText").innerText = q.text;
+
+      const optionsBox = document.getElementById("optionsBox");
+      optionsBox.innerHTML = "";
+
+      q.options.forEach((option, index) => {
+        optionsBox.innerHTML += `
+          <button
+            onclick="checkAnswer(${index})"
+            style="display:block;width:100%;margin-bottom:12px;padding:14px;border:none;border-radius:12px;background:#e5e7eb;cursor:pointer;font-size:16px;">
+            ${option}
+          </button>
+        `;
+      });
+
+      document.getElementById("feedback").innerHTML = "";
+    }
+
+    function checkAnswer(selected) {
+      const q = kinematicsQuestions[currentQuestion];
+
+      if(selected === q.answer) {
+        document.getElementById("feedback").innerHTML = "✅ Correct Answer";
+      } else {
+        document.getElementById("feedback").innerHTML = "❌ Incorrect Answer";
+      }
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+
+      if(currentQuestion >= kinematicsQuestions.length) {
+        currentQuestion = 0;
+      }
+
+      loadQuestion();
+    }
+
+  </script>
+
+</body>
+</html>
